@@ -1,0 +1,62 @@
+---
+title: "Logistic Regression Covariance Exercise"
+author: "C. Durso"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(MASS)
+```
+
+## Purpose
+
+This illustrates the use of the covariance matrix of a logistic regression to test generate multiple $\hat{\boldsymbol{\beta}}$ values. These can be used to estimate the variability of the probability of the outcome given explanatory variables.
+
+## Data
+
+```{r}
+dat<-read.csv("SAheart.data")
+dat$row.names<-NULL
+dat$famhist<-(dat$famhist=="Present")*1
+```
+
+## Model
+
+```{r}
+fmla.backward.best<-as.formula("chd ~ 1 + age + ldl + famhist + tobacco + I(typea^2) + I(age^2) + 
+    I(sbp^2)")
+```
+
+## Sample from $\hat{\boldsymbol{\beta}}$ distribution
+
+```{r}
+
+```
+
+## Model "chd" probabilities
+
+Using the data from the 15th observation and the collection of sets of reasonable coefficients, model possible probabilities of "chd" for case 15.
+
+```{r}
+# original estimate
+
+
+# vector of observations
+# You may find model.matrix useful with this model.
+
+
+# matrix with columns equal to collections of coefficients
+
+
+# values of the linear predictor
+
+
+# values of the logistic function of the linear predictor,
+# aka probabilities
+
+# .025,.5,.975 quantiles of simulated probabilities
+
+```
+

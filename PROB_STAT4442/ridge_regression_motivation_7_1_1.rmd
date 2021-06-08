@@ -1,0 +1,189 @@
+---
+title: "Ridge Regression Motivation"
+author: "C. Durso"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+#library(glmnet)
+library(MASS)
+```
+
+## Purpose
+
+This document gives two examples of a data sets that fit the $\mathbf{y}=\mathbf{X}\boldsymbol{\beta}+\boldsymbol{\varepsilon}$ model with the $\varepsilon_i$'s independent, identically distributed random variables with the $Normal(0,\sigma^2)$. One data set has highly correlated explanatory variables, while the other doesn't. The consequences of the correlation for the fitted coefficients are explored.
+
+## Generate two data sets
+
+The following creates two data sets by random sampling. 
+
+In one, dat.low.train, the correlations of the explanatory variables "X1" through "X10" are low. 
+
+In the other, dat.high.train, the correlations of the explanatory variables "X1" through "X10" are high. 
+
+The "X1" through "X10" in dat.high.train are linear combinations of those in dat.low.train. The linear combinations are designed so that the vector sums $\frac{\sum_{i=1}^{10}\mathbf{X}_i}{10}$ are equal for the data sets.
+
+The value of the outcome variable "y" is the same in both data sets. It equals the mean of the explanatory variables with $Normal(0,(0.2)^2)$ noise.
+
+Test sets are also generated for future reference.
+
+### Set up the constants
+
+```{r}
+p<-10 # number of explanatory variables
+n<-100 # number of cases in the training data sets
+m<-n+floor(n*.2) # number of cases in train and test sets together
+a<-.4 # value controlling correlation in the high correlation data
+A<-matrix(rep(a,p*p),ncol=p)
+diag(A)<-1
+A<-A/sum(A[1,]) # matrix for transforming the low correlation data
+                # to the high correlation data
+```
+
+### Generate explanatory variables
+
+The values in the columns of "X.low" are independent samples from the standard Normal distribution. This choice of distribution is arbitrary.
+
+```{r}
+
+set.seed(3456789)
+
+X.low<-matrix(rnorm(m*p),ncol=p)  # statistically independent 
+                                  # columns
+X.high<-X.low%*%A   # linear transform of X.low with statistically
+                    # dependent columns
+```
+
+## Correlations
+
+The columns of X.high show high correlations, while those of X.low do not.
+
+```{r}
+temp<-cor(X.high)
+diag(temp)<- NA
+max(temp, na.rm=TRUE)
+min(temp,na.rm=TRUE )
+
+temp<-cor(X.low)
+diag(temp)<- NA
+max(temp, na.rm=TRUE)
+min(temp,na.rm=TRUE )
+```
+
+### Generate the outcome variable
+
+The row means are equal for "X.low" and "X.high". The outcome variable equals these means with $Normal(0,(0.2)^2)$ noise added.
+
+```{r}
+# Check equality
+all.equal(apply(X.low,1,mean),apply(X.high,1,mean))
+
+y.base<-apply(X.low,1,mean)
+y<-y.base+rnorm(m,0,.2)
+```
+
+### Create data frames
+
+Bind "y" and the explanatory variables with low and high correlation into data frames "dat.low" and "dat.high" respectively. Split these into training and test data.
+
+```{r}
+dat.low<-data.frame(y,X.low)
+dat.high<-data.frame(y,X.high)
+dat.low.train<-dat.low[1:n,]
+dat.low.test<-dat.low[(n+1):m,]
+
+dat.high.train<-dat.high[1:n,]
+dat.high.test<-dat.high[(n+1):m,]
+```
+
+## Model performance
+
+Note that both data sets are generated according to the model $\mathbf{y}=\mathbf{X}\boldsymbol{\beta}+\boldsymbol{\varepsilon}$ model with the $\varepsilon_i$'s independent, identically distributed random variables with the $Normal(0,\sigma^2)$. In fact, $\boldsymbol{\beta}=[0.1,0.1,...0.1]^T$ and $\sigma^2=(0.2)^2$.
+
+### Fit linear regressions for both data sets.
+
+Note that the F-statistic is the same for both data sets. This is consistent with the equality of the column spaces for the two data sets.
+
+```{r}
+m.low<-lm(y~.,dat.low.train)
+m.high<-lm(y~.,dat.high.train)
+
+summary(m.low)
+summary(m.high)
+```
+
+Compare the predictions for the models
+
+```{r}
+mean(m.low$residuals^2)
+mean(m.high$residuals^2)
+
+all.equal(m.low$residuals^2,m.high$residuals^2)
+```
+
+## Replicate
+
+Collect coefficients from multiple runs for both the high and low correlation data sets. On each run, the Normal noise for the outcome variable is resampled.
+
+```{r}
+coeffs<-function(dat){
+  y<-apply(dat[,-1],1,mean)+rnorm(nrow(dat))# resample noise
+  dat$y<-y
+  return(lm(y~.,data=dat)$coefficients)
+}
+
+
+# Generate multiple sets of coefficients for the high correlation
+# data.
+set.seed(3456787)
+coeff.sample<-replicate(20,coeffs(dat.high.train))
+
+# Save coefficients in data frame with columns for the coefficients
+# for each variable. 
+coeff.sample<-data.frame(t(coeff.sample)) 
+
+# Create an iteration ID column.
+names(coeff.sample)[1]<-"iteration"
+coeff.sample$iteration<-1:nrow(coeff.sample)
+
+# Put the data in long form with a column recording the variable 
+# corresponding to the coefficient and a column of values.
+coeff.sample<-gather(coeff.sample,key="coef",value="value",X1:X10)
+
+# Append a column identifying the value as coming from a
+# model for the high correlation data.
+coeff.sample$corr.level<-"high"
+
+# Repeat for low correlation data
+set.seed(3456787)
+coeff.sample.low<-replicate(20,coeffs(dat.low.train))
+coeff.sample.low<-data.frame(t(coeff.sample.low))
+names(coeff.sample.low)[1]<-"iteration"
+coeff.sample.low$iteration<-1:nrow(coeff.sample.low)
+coeff.sample.low<-gather(coeff.sample.low,key="coef",value="value",X1:X10)
+coeff.sample.low$corr.level<-"low"
+
+# Bind the two data sets of coefficients in preparation for
+# visualization.
+coeff.sample<-bind_rows(coeff.sample,coeff.sample.low)
+```
+
+
+### Plot the generated coefficients
+
+The horizontal line is at $\beta=0.1$, the true population value.
+
+```{r}
+ggplot(data=coeff.sample, aes(x=iteration,y=value,color=coef))+
+  geom_line()+geom_hline(yintercept = 0.1)+
+  facet_wrap(~corr.level)+
+  ggtitle("Regression Coefficients")+ xlab("iteration")+
+  ylab(expression(beta))
+```
+
+
+

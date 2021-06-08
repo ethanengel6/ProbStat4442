@@ -1,0 +1,235 @@
+---
+title: "Problem Set 5, Spring 2021"
+author: "Wendy Christensen"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load any packages, if any, that you use as part of your answers here
+# For example: 
+
+library(tidyverse)
+library(lmtest)
+
+```
+
+# Question 1 - 10 points
+
+The relation of odds and odds ratios to probabilities is important to interpretation of the output of a logistic regression model.
+
+If the odds of an event equal $b$, what is the probability $p$ of the event? This question has three parts:
+
+1) Write a function to compute the probability from the odds.
+
+```{r}
+
+# Write your function
+
+prob.from.odds<-function(b){
+  
+b/(b+1)
+  
+}
+
+```
+
+2) Test your function by inputting three test values - 5, 10, and 20 - and showing what the output of your function is for these values. That is, when the odds are 5, 10, and 20, what are the associated probabilities? Be sure that your outputted probabilities display in your knitted document.
+
+```{r}
+test_odds<-c(5,10,20)
+prob.from.odds(test_odds)
+
+
+```
+
+
+3) Create a plot that visually demonstrates how the probability changes within in the range $\left[0.1,20\right]$. ; probability should be on the y axis and odds should be on the x axis.
+
+```{r}
+odds_vals<-seq(.1,20,by=.1)
+qplot(odds_vals,prob.from.odds(odds_vals))
+# Create your plot. Probability should be on the Y-axis and odds should be on the X-axis. 
+
+
+```
+
+4) Answer the following question:
+
+Based on what you see in your plot, what happens to a computed probability as the associated odds increase? This can be answered in one sentence. 
+
+Your answer here: As odds increases without bound, the probability asymptotically approaches 1 from below.
+
+----
+
+
+CONTEXT: Pew Research Center data
+
+The data in "pew_data.RData" comes from the Pew Research Center, an organization that conducts nationally-representative public opinion polls on a variety of political and social topics. Dr. Durso constructed this data set from the 2017 Pew Research Center Science and NewsSurvey, downloaded from https://www.journalism.org/datasets/2018/ on 4/16/2019. 
+
+The variable "LIFE" contains the responses of participants to the following question:
+
+"In general, would you say life in America today is better, worse or about the same as it was 50 years ago for people like you?"
+  
+1 = Better today
+
+2 = Worse today
+
+3 = About the same as it was 50 years ago
+
+-1 = Refused
+
+
+
+# Preamble to Questions 2-5 - Read this before starting on Question 2. 
+
+Using the data contained in "pew", you will fit two logistic regression models using the LIFE variable as the outcome. 
+
+Model 1: Include income as a continuous predictor and gender as a categorical predictor. 
+
+Model 2: In addition to the predictors in Model 1, include ethnicity and education as categorical predictors.
+
+
+
+# Question 2 - 5 points
+
+Before beginning your analysis, you will need to do some processing of your data: 
+
+1) Recode the LIFE variable such that "Worse today" equals 1 and the other responses are equal to zero. 
+2) Set the four predictors you will use in the two models - income, gender, ethnicity, and education - to the variable types indicated in the preamble. 
+
+Run the code in the chunk below first to examine some properties of this data set.
+
+```{r}
+
+load("pew_data.RData")
+pew<-dplyr::select(dat,PPINCIMP,PPGENDER,PPETHM,IDEO,PPEDUCAT,LIFE)
+pew<-filter(pew,LIFE>0) # filters out cases with responses less than zero.
+
+# This code displays counts of different responses for six variables in the pew data.
+
+table(pew$PPINCIMP)
+table(pew$PPGENDER)
+table(pew$PPETHM)
+table(pew$IDEO)
+table(pew$PPEDUCAT)
+table(pew$LIFE)
+
+# This code displays the questions and labels associated with different numeric values in six variables.
+
+attributes(pew$PPINCIMP)$labels #income
+attributes(pew$PPGENDER)$labels #gender
+attributes(pew$PPETHM)$labels #ethnicity
+attributes(pew$IDEO)$labels #ideology
+attributes(pew$PPEDUCAT)$labels #education
+attributes(pew$LIFE)$labels
+
+```
+
+Next, write the processing code needed to recode the outcome variable and to set the predictor variables to the correct variable types. Once you've done this, display your data set using the str() function. 
+
+```{r}
+
+# Your processing code here
+pew$LIFE[pew$LIFE!=2]<-0
+pew$LIFE[pew$LIFE==2]<-1
+
+pew$PPINCIMP<-as.numeric(pew$PPINCIMP)
+pew$PPGENDER<-as.factor(pew$PPGENDER)
+pew$PPETHM<-as.factor(pew$PPETHM)
+pew$PPEDUCAT<-as.factor(pew$PPEDUCAT)
+# Don't forget to display your final data set with the str() function!
+table(pew$LIFE)
+str(pew)
+
+```
+
+
+# Question 3 - 10 points
+
+Be sure to have completed Question 2 before beginning this question. 
+
+Now that your data have been processed, fit two logistic regression models as described in the preamble and display the results using the summary() function. As a reminder, here are the two models:
+
+Model 1: Include income as a continuous predictor and gender as a categorical predictor. 
+
+```{r}
+
+# Your code for Model 1 
+model.1<-glm(LIFE~PPINCIMP+PPGENDER,data=pew,family="binomial")
+summary(model.1)
+
+
+# Don't forget to use the summary() function to display the results!
+
+
+```
+
+Model 2: In addition to the predictors in Model 1, include ethnicity and education as categorical predictors.
+
+```{r}
+
+# Your code for Model 2
+model.2<-glm(LIFE~PPINCIMP+PPGENDER+PPETHM+PPEDUCAT,data=pew,family="binomial")
+summary(model.2)
+
+# Don't forget to use the summary() function to display the results!
+
+
+```
+
+
+# Question 4 - 10 points
+
+Conduct a likelihood ratio test between these two models. Make sure that your output for this analysis makes sense for what you're doing (hint: check the degrees of freedom). 
+
+```{r}
+
+# Your code for the likelihood ratio test here
+lrtest(model.1,model.2)
+```
+
+Next, state the null hypothesis of the likelihood ratio test and interpret the obtained result of the test.
+
+Your answer here:The null hypothesis is that we should use model.1, the nested model, rather than model.2, which has more predictor variables.
+
+Based on the results of the likelihood ratio test, which model would you choose?
+
+Your answer here: With such a high chi-square statistic and low p-value, we would reject the null hypothesis, that we should use model.1, the nested model.  Model two, which includes the ethnicity and education variables should be used.
+
+
+
+
+# Question 5 - 15 points
+
+Please display confusion matrices for both of the models above and compute the accuracy and precision of both models. Which model is best if choosing based on accuracy? Which model is best if choosing based on precision?
+
+```{r}
+
+# Your code here
+model1.probs<-predict(model.1,type="response")
+model2.probs<-predict(model.2,type="response")
+predictions1<-ifelse(model1.probs>0.5,1,0)
+predictions2<-ifelse(model2.probs>0.5,1,0)
+cf1<-table(predictions1,pew$LIFE)
+cf2<-table(predictions2,pew$LIFE)
+cf1
+cf2
+accuracy1<-(cf1[1,1]+cf1[2,2])/(cf1[1,1]+cf1[1,2]+cf1[2,1]+cf1[2,2])
+accuracy2<-(cf2[1,1]+cf2[2,2])/(cf2[1,1]+cf2[1,2]+cf2[2,1]+cf2[2,2])
+precision1<-cf1[2,2]/(cf1[2,1]+cf1[2,2])
+precision2<-cf2[2,2]/(cf2[2,1]+cf2[2,2])
+accuracy1
+accuracy2
+precision1
+precision2
+
+
+```
+
+Best model based on accuracy: Model2 outperformed model1 as measured by accuracy, .580 to .562.
+
+Best model based on precision: Model2 also slightly outperformed model1 as measured by precision, .562 to .549

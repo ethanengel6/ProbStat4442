@@ -1,0 +1,103 @@
+---
+title: "PS4442 Final Project RSM"
+author: "Ethan Engel"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(rsm)
+```
+
+
+
+
+```{r cars}
+ghi<-read.csv("ghi_rsm.csv")
+head(ghi)
+count(ghi)
+```
+#https://cran.r-project.org/web/packages/rsm/vignettes/rsm.pdf
+
+```{r pressure, echo=FALSE}
+
+par(mfrow=c(1,2))
+ghi$nation[ghi$GHI_score==max(ghi$GHI_score)]
+max(ghi$GHI_score)
+boxplot(ghi$GHI_score,xlab="GHI Scores",horizontal = TRUE)
+qqnorm(ghi$GHI_score, pch = 1, frame = FALSE)
+qqline(ghi$GHI_score, col = "steelblue", lwd = 2)
+boxplot(ghi$FSI_score,xlab="FSI Scores",horizontal = TRUE)
+qqnorm(ghi$FSI_score, pch = 1, frame = FALSE)
+qqline(ghi$FSI_score, col = "steelblue", lwd = 2)
+ghi$nation[ghi$FSI_score==min(ghi$FSI_score)]
+ghi$nation[ghi$FSI_score==max(ghi$FSI_score)]
+min(ghi$FSI_score)
+max(ghi$FSI_score)
+boxplot(ghi$GDP_capita,xlab="GDP/Capita",horizontal = TRUE)
+qqnorm(ghi$GDP_capita, pch = 1, frame = FALSE)
+qqline(ghi$GDP_capita, col = "steelblue", lwd = 2)
+ghi$nation[ghi$GDP_capita==min(ghi$GDP_capita)]
+ghi$nation[ghi$GDP_capita==max(ghi$GDP_capita)]
+min(ghi$GDP_capita)
+max(ghi$GDP_capita)
+boxplot(ghi$curr_temp_change,xlab="temperature change",horizontal = TRUE)
+qqnorm(ghi$curr_temp_change, pch = 1, frame = FALSE)
+qqline(ghi$curr_temp_change, col = "steelblue", lwd = 2)
+ghi$nation[ghi$curr_temp_change==min(ghi$curr_temp_change)]
+ghi$nation[ghi$curr_temp_change==max(ghi$curr_temp_change)]
+ghi$nation[ghi$curr_temp_change<0]
+min(ghi$curr_temp_change)
+max(ghi$curr_temp_change)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+
+
+rsm_1st_order <- rsm(GHI_score ~ FO(FSI_score, GDP_capita, curr_temp_change), data = ghi)
+#FO=1st order/linear
+
+rsm_2order_noTWI <- rsm(GHI_score ~ FO(FSI_score, GDP_capita, curr_temp_change) + PQ(FSI_score, GDP_capita, curr_temp_change), data = ghi)
+#PQ - Pure Quadratic
+
+rsm_2order<-rsm(GHI_score ~ SO(FSI_score, GDP_capita, curr_temp_change),data=ghi)
+#SO- 2nd order: 1st order & 2-way interactions & pure quadratic terms 
+
+summary(rsm_1st_order)
+summary(rsm_2order_noTWI)
+summary(rsm_2order)
+
+anova(rsm_1st_order,rsm_2order_noTWI)
+anova(rsm_2order_noTWI, rsm_2order)
+
+AIC(rsm_1st_order,rsm_2order_noTWI,rsm_2order)
+
+```
+
+```{r}
+par(mfrow=c(1,2))
+contour(rsm_1st_order, ~ FSI_score + GDP_capita, image = TRUE, main="first-order model")
+
+persp(rsm_1st_order, FSI_score ~ GDP_capita, zlab = "GHI_score", main="first-order model")
+par(mfrow=c(1,2))
+contour(rsm_2order_noTWI, ~ FSI_score + GDP_capita, image = TRUE, main="2nd-order model w/o interactions")
+persp(rsm_2order_noTWI, FSI_score ~ GDP_capita, zlab = "GHI_score", main="2nd-order model w/o interactions")
+contour(rsm_2order_noTWI, ~ FSI_score + curr_temp_change, image = TRUE, main="2nd-order model w/o interactions")
+persp(rsm_2order_noTWI, FSI_score ~ curr_temp_change, zlab = "GHI_score", main="2nd-order model w/o interactions")
+contour(rsm_2order_noTWI, ~ curr_temp_change + GDP_capita, image = TRUE, main="2nd-order model w/o interactions")
+persp(rsm_2order_noTWI, curr_temp_change ~ GDP_capita, zlab = "GHI_score", main="2nd-order model w/o interactions")
+
+```
+```{r}
+par(mfrow=c(1,2))
+gdp_list<-list(GDP_capita=0)
+axes_list<-list(curr_temp_change=c(0,5),FSI_score=c(0,100))
+contour(rsm_2order_noTWI, ~ FSI_score + curr_temp_change,at=gdp_list,bounds=axes_list, image = TRUE, main="2nd-order model w/o interactions")
+persp(rsm_2order_noTWI, FSI_score ~ curr_temp_change,at=gdp_list,bounds=axes_list, zlab = "GHI_score", main="2nd-order model w/o interactions")
+```
+
+

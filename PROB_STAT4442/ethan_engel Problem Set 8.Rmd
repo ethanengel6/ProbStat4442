@@ -1,0 +1,246 @@
+---
+title: "Problem Set 8, Spring 2021"
+author: "Wendy Christensen"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=TRUE}
+
+# Load any packages, if any, that you use as part of your answers here
+# For example: 
+
+library(MASS)
+library(glmnet)
+library(mlbench)
+library(survival)
+library(survminer)
+library(tidyverse)
+
+```
+
+CCONTEXT - HOUSE VALUES IN BOSTON, CIRCA 1970
+
+This dataset was obtained through the mlbench package, which contains a subset of data sets available through the UCI Machine Learning Repository. From the help file:
+
+Housing data for 506 census tracts of Boston from the 1970 census. The dataframe BostonHousing contains the original data by Harrison and Rubinfeld (1979).
+
+The original data are 506 observations on 14 variables, medv being the target variable:
+
+Continuous variables:
+
+crim	      per capita crime rate by town 
+zn       	proportion of residential land zoned for lots over 25,000 sq.ft  
+indus   	   proportion of non-retail business acres per town
+nox	      nitric oxides concentration (parts per 10 million)
+rm	         average number of rooms per dwelling
+age	      proportion of owner-occupied units built prior to 1940
+dis	      weighted distances to five Boston employment centres
+rad	      index of accessibility to radial highways
+tax	      full-value property-tax rate per USD 10,000
+ptratio	   pupil-teacher ratio by town
+b	         1000(B - 0.63)^2 where B is the proportion of blacks by town
+lstat	      percentage of lower status of the population
+medv	      median value of owner-occupied homes in USD 1000's
+
+Categorical variables: 
+
+chas	    Charles River dummy variable (= 1 if tract bounds river; 0 otherwise)
+
+## Question 1 - 5 points
+
+```{r}
+
+data(BostonHousing) # loads the BostonHousing dataset into memory from the mlbench package
+head(BostonHousing)
+# Any processing code for changing variable types
+
+
+```
+
+
+Next, split the sample into a training set (70%) and a test set (30%). For convenience, I've provided a seed to make your split reproducible. 
+
+```{r}
+
+set.seed(123456)
+
+# Your code here
+n<-nrow(BostonHousing)
+n
+Boston_tt<-sample(rep(0:1,c(round(n*.3),n-round(n*.3))),n)
+Boston.train<-BostonHousing[Boston_tt==1,]
+Boston.test<-BostonHousing[Boston_tt==0,]
+count(Boston.train)
+count(Boston.test)
+```
+
+## Question 2 - 10 points 
+
+After completing Question 1, conduct a ridge regression with cross-validation using the training data set. Use medv as the outcome and all of the other variables in the data set as the predictors. Be sure to display your lambda.min and the set of coefficients associated with it.
+
+```{r}
+
+set.seed(123456)
+
+# Your code here
+X<-data.matrix(dplyr::select(Boston.train, -medv))
+Y<-Boston.train$medv
+
+ridge.model<-cv.glmnet(x=X,y=Y,alpha=0)
+ridge.model
+plot(ridge.model)
+
+# Don't forget to display lambda.min and the coefficients associated with it!
+ridge.model$lambda.min
+coef(ridge.model, s = "lambda.min")
+
+```
+
+## Question 3 - 5 points
+
+Using the results from Question 2, compute the mean squared prediction error for the lambda.min model when applied to the test data set. Be sure to show how you computed it and to display the result.
+
+```{r}
+
+# Your code here
+X2<-data.matrix(dplyr::select(Boston.test, -medv))
+Y2<-Boston.test$medv
+
+ridge.pred <- predict(ridge.model, s = ridge.model$lambda.min, newx = X2)
+mse<-mean((ridge.pred-Y2)^2)
+mse
+```
+
+--------
+
+CONTEXT - NYC BIKERS
+
+The NYC Open Data Portal contains information about the number of cyclists who cross different bridges in the eastern part of New York City. The data for this question is an edited subset of the data available. To see the full data, see https://data.cityofnewyork.us/Transportation/Bicycle-Counts-for-East-River-Bridges/gua4-p9wg. 
+
+Variables of interest for this question (all are continuous):
+
+M_bridge_count: The daily count of cyclists who ride across the Manhattan Bridge
+temp_hi: The highest temperature recorded that day (in Fahrenheit)
+precipitation: The amount of precipitation recorded that day (in inches)
+
+## Question 4 - 15 points
+
+Please fit three models using this data: a Poisson model, a quasipossion model, and a negative binomial model. The outcome of these analyses should be M_bridge_count, and the predictors should be temp_hi and precipitation. Note: your outcome variable contains commas to mark the thousands place, so be sure to remove them before starting.
+
+```{r}
+#
+bike<-read.csv("NYCBikes.csv")
+bike$M_bridge_count<-as.numeric(gsub(",", "",bike$M_bridge_count))
+head(bike)
+# Make any changes you need to make to the variable types
+
+```
+
+Now, fit the three models and display the results of each:
+
+Poisson
+```{r}
+
+# Your code here for Poisson
+bike.poisson<-glm(M_bridge_count~temp_hi+precipitation,data=bike,family="poisson")
+summary(bike.poisson)
+# Don't forget to display the results using the summary() function!
+
+```
+
+Quasipoisson
+```{r}
+
+# Your code here for quasipoisson
+bike.qp<-glm(M_bridge_count~temp_hi+precipitation,data=bike,family="quasipoisson")
+summary(bike.qp)
+# Don't forget to display the results using the summary() function!
+
+```
+
+Negative binomial
+```{r}
+
+# Your code here for negative binomial
+bike.nb<-glm.nb(M_bridge_count ~ temp_hi + precipitation,data=bike)
+summary(bike.nb)
+# Don't forget to display the results using the summary() function!
+
+```
+
+
+Once you have fit all three models, pick one of these and indicate which one is best. Please note what parts of the output (e.g., dispersion parameter estimates, residual deviance, theta parameter, changes in standard errors/p-value) you used to make your decision. Be specific! 
+
+Your answer here:The negative binomial model would be the appropriate choice of the three models run.  There is far too much overdispersion for both the Poisson & Quasipoisson models, with a residual deviance of 29149 on 80 degrees of freedom for each.  The negative binomial model generated a residual deviance of 84.447 on the 80 degrees of freedom for a ratio of < 1.06, reasonably close to the ideal ratio of 1, rather than > 364 for the Poisson & Quasipoisson models.
+
+
+
+## Question 5 - 15 points
+
+Before beginning this question, please review the material from 9.4.3 in the async material. 
+
+The following code is excerpted from the example shown in 9.4.3. Please run the three code chunks and examine their output. Once you've done that, answer the four questions below.
+
+```{r}
+
+# Chunk 1
+
+sheep<-read.csv("sheep.deaths.csv")
+
+with(sheep,plot(survfit(Surv(death,status)~group),lty=c(1,3,5),xlab="Age at Death (months)"))
+legend("topright", c("A", "B","C"), lty = c(1,3,5))
+
+
+```
+
+```{r}
+
+# Chunk 2
+
+model<-survreg(Surv(death,status)~group, dist="exponential",data=sheep)
+summary(model)
+```
+
+```{r}
+
+# Chunk 3
+
+plot(survfit(Surv(sheep$death,sheep$status)~sheep$group),lty=c(1,3,5),xlab="Age at Death (months)")
+legend("topright", c("A", "B","C"), lty = c(1,3,5))
+
+points(1:50,
+       1-pexp(1:50,rate=1/exp(model$coefficients[1])),
+       type="l",
+      lty=1)
+# The survival curve S(t) for group B.
+points(1:50,
+       1-pexp(1:50,rate=1/exp(sum(model$coefficients[c(1,2)]))),
+       type="l",
+      lty=3)
+# The survival curve S(t) for group C.
+points(1:50,
+1-pexp(1:50,rate=1/exp(sum(model$coefficients[c(1,3)]))),
+       type="l",
+      lty=5)
+
+```
+
+# Chunk 1 question: What kind of plot is this? It has a specific name.
+
+Your answer here: These are all Kaplan-Meier survival analysis curves.
+
+# Chunk 2 question 1: What kind of survival model is being fitted in this code?
+
+Your answer here:This function is for Accelerated Failure Time Models.
+
+# Chunk 2 question 2: What does the output of this model suggest about the treatment groups (A, B, and C)?
+
+Your answer here: The coefficients suggest that group A had the longest life spans, followed by Groups B & C.  The z & p values suggest the differences between the reference group & the other two are statistically significant.
+
+# Chunk 3 question: The jagged lines on this plot are the same as those from the plot shown in Chunk 1. What is being visualized by the the smooth, curved lines in this plot?
+
+Your answer here: These are exponential predicted survival curves, which the sheep survival data has generated.
+
+

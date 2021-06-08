@@ -1,0 +1,96 @@
+---
+title: "Model Performance"
+author: "C. Durso"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Prediction Measures
+
+For a logistic regression model, the predicted value of the outcome for a case is the maximum likelihood outcome according to the model.Let $true$ be the set of cases in which the outcome is a "success" and let $predictedtrue$ be the set of outcomes for which the fitted probability is greater than or equal to $0.5$. Precision is $\frac{|true\cap predicted true|}{|predictedtrue|}$, recall is $\frac{|true\cap predicted true|}{|true|}$, F1 is $2\frac{|precision|\cdot |recall|}{precision+recall}$, while accuracy is the percent of cases in which the predicted outcome equals the observed outcome.
+
+Given the model "chd ~ 1 + age + ldl + famhist + tobacco + I(typea^2) + I(age^2) + 
+    I(sbp^2)" for the "SAheart.data" and the training, validation, and test sets from the previous analyses,one can compute the accuracy, precision, recall and F1 values on the test data of the model fit on the combined training data and validation data.
+
+### Data
+
+Read in the data and break it into a combined training and validation set and a test set. Preserve the breakdown used in the analysis of the appropriateness of the train-validate-test protocol for this analysis. 
+
+```{r}
+dat<-read.csv("SAheart.data")
+# The "dplyr::"" specifies that the dplyr "select" function be used
+dat<-dplyr::select(dat, -row.names) 
+n<-nrow(dat)
+dat$famhist<-(dat$famhist=="Present")*1 # better for bestglm
+
+set.seed(123456)
+tvt<-sample(rep(0:2,c(round(n*.2),round(n*.2),n-2*round(n*.2))),n)
+
+
+dat.comb<-dat[tvt==2 |tvt==1,]
+dat.test<-dat[tvt==0,]
+```
+
+### The model
+
+The formula above is used to fit a model to "dat.comb"
+
+```{r}
+
+fmla<-as.formula("chd ~ 1 + age + ldl + famhist + tobacco + I(typea^2) + I(age^2) + 
+    I(sbp^2)")
+m<-glm(fmla,data=dat.comb,family="binomial")
+```
+
+### Predictions
+
+```{r}
+prob<-predict(m,dat.test,type="response")
+pred<-prob>=.5
+table(dat.test$chd,pred)
+```
+
+### Accuracy
+
+```{r}
+fitted<-pred*1
+accuracy<-mean(dat.test$chd==fitted)
+mean(dat.test$chd==0)
+
+```
+
+### Precision
+
+```{r}
+precision<-sum(dat.test$chd==1 & fitted==1)/sum(fitted==1)
+
+```
+
+### Recall
+
+```{r}
+recall<-# your code here
+```
+
+### F1
+
+```{r}
+2*precision*recall/(precision+recall)
+```
+
+### Cohen's kappa
+
+```{r}
+pe<-(sum(fitted==1)*sum(dat.test$chd==1)+
+       sum(fitted==0)*sum(dat.test$chd==0))/nrow(dat.test)^2
+po<-accuracy
+
+(po-pe)/(1-pe)
+```
+
+
+

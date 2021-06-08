@@ -1,0 +1,46 @@
+---
+title: "Lasso Regression Exercise"
+author: "C. Durso"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(glmnet)
+```
+
+## Purpose
+
+Lasso regression is a method for stabilizing linear regression in the presence of more variables or more correlated variables than desireable for a model that should generalize well to new data.
+
+Fit a cross-validated lasso regression model.
+
+## Data
+
+```{r}
+dat<-read.table("prostate.data",header=TRUE)
+
+dat.train<-filter(dat,train)
+dat.test<-filter(dat,!train)
+dat.train<-dplyr::select(dat.train,-train)
+dat.test<-dplyr::select(dat.test,-train)
+
+X<-as.matrix(dplyr::select(dat.train, -lpsa))
+Y<-dat.train$lpsa
+Xtest<-as.matrix(dplyr::select(dat.test, -lpsa))
+```
+
+## Run cross validated lasso
+
+The function cv.glmnet computes one cross-validated MSE at each $\lambda$.
+
+```{r}
+set.seed(123456)
+```
+
+
+
+

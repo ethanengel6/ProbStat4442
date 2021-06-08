@@ -1,0 +1,319 @@
+---
+title: "Problem Set 3, Spring 2021"
+author: "Wendy Christensen"
+output: pdf_document
+---
+
+```{r setup, include=TRUE}
+
+# Load any packages, if any, that you use as part of your answers here
+# For example: 
+
+library(MASS)
+
+```
+
+CONTEXT - DOUGHNUTS DATA
+
+As a reminder, I decided to conduct a factorial experiment inspired by the experiment conducted by Lowe (1935) to learn more about how much fat doughnuts absorb in different conditions. Like Lowe, I used four types of fats (fat_type). I also used three types of flour (flour_type): all-purpose flour, whole wheat flour, and gluten-free flour. Again like Lowe, I cooked six identical batches of doughnuts in each flour and fat combination. Each batch contained 24 doughnuts, and the total fat (in grams) absorbed by the doughnuts in each batch was recorded (sim_tot_fat).
+
+# Question 1 - 5 points
+
+You will need to read your data set into memory and may need to process your data before you begin your analysis. The data are in the CSV file "doughnutsfactorial.csv". Please provide your code for doing this in the code chunk below. Once you've done this, display the attributes of your data set using the str() function. 
+
+```{r }
+
+# Your code for reading in the data and changing variable types, if needed
+
+
+# Don't forget to display the data set attributes using the str() function!
+
+
+```
+
+
+# Question 2 - 10 points
+
+Using the code in the code chunk below, I fitted a regression model that has a specification equivalent to a one-way ANOVA. Specifically, I used the doughnuts.factorial data set and Run this code, then answer the questions about the output:
+
+```{r }
+
+doughnuts.reg = lm(sim_tot_fat ~ fat_type_factor, data=doughnuts.factorial) # You may need to change the variable names depending on how you named the variables in Question 1
+
+summary(doughnuts.reg)
+
+```
+
+
+Question 1: What is the interpretation of the intercept coefficient? For full credit, your interpretation must be specific to the fitted model and the research context.  
+
+Your answer here:
+
+Question 2: What is the interpretation of the coefficient labeled "fat_type_factor2"? For full credit, your interpretation must account for the other coefficients in the model. 
+
+Your answer here:
+
+Question 3: Which of the fat type vector coefficients (if any) are significantly different from zero? You may omit the intercept from your answer. 
+
+Your answer here:
+
+
+# Question 3 - 10 points
+
+In Problem Set 2, Question 5, you conducted a two-way factorial ANOVA with an interaction. First, copy this code from your answer to Problem Set 2, Question 4 into the first code chunk and display the results using the summary() function. 
+
+```{r }
+
+# Your two-way ANOVA code from Problem Set 2, copied and pasted here. You may need to change the variable names depending on on how you named the variables in Question 1 of this problem set
+
+
+
+# Don't forget to display the results with the summary() function!
+
+
+```
+
+Next, conduct a regression analysis that is equivalently-specified; that is, it should have sim_tot_fat as the outcome and fat_type, flour_type, and their interaction as predictors. (Hint: much like in the aov() function, interactions are specified in lm() by using * between the two variables that interact). Display the summary of this model using the summary() function. Once you have done this, answer the questions below.
+
+```{r }
+
+# Your code for an equivalently-specified regression model. 
+
+
+
+# Don't forget to display the results with the summary() function!
+
+
+```
+
+Question 1: How many coefficients are associated exclusively with the (main) effect of fat type? Do not count the intercept.
+
+Your answer here:
+
+Question 2: How many coefficients are associated exclusively with the (main) effect of flour type? Do not count the intercept.
+
+Your answer here:
+
+Question 3: How many coefficients are associated with the effect of the interaction between fat type and flour type? Do not count the intercept.
+
+Your answer here:
+
+Question 4: What is the predicted amount of fat absorbed by a doughnut made from gluten-free flour and cooked in fat type 3? For full credit, you may use any valid method of finding this value, but you must show how you obtained it.
+
+```{r}
+
+# Show how you obtained your answer here.
+
+```
+
+Your answer here:
+
+
+
+
+CONTEXT - FISHERMAN DATA (many thanks to Dr. Durso for obtaining this data set)
+
+Data Source: N.B. Al-Majed and M.R. Preston (2000). "Factors Influencing the Total
+Mercury and Methyl Mercury in the Hair of Fishermen in Kuwait," 
+Environmental Pollution, Vol. 109, pp. 239-250.
+
+   http://users.stat.ufl.edu/~winner/datasets.html, downloaded on 4/23/2019
+
+Description: Factors related to mercury levels among fishermen and a control
+group of non-fishermen.
+
+Variables (names of variables in the data set)
+
+Fisherman indicator ("fisherman"), categorical
+   0 = No
+   1 = Yes
+
+Age in years ("age"), continuous
+
+Residence Time in years ("restime"), continuous
+
+Height in cm ("height"), continuous 
+
+Weight in kg ("weight"), continuous
+
+Fish meals per week ("fishmlwk"), continuous
+
+Parts of fish consumed ("fishpart"), categorical
+    0 = none 
+    1 = muscle tissue only
+    2 = mt and sometimesvwhole fish 
+    3 = whole fish
+              
+Methyl Mercury in mg/g ("MeHg"), continuous
+
+Total Mercury in mg/g  ("TotHg"), continuous
+
+
+## Question 4 - 5 points
+
+You will need to read this data set into memory and may need to process your data before you begin your analysis. The data are in the CSV file "fishermen_mercury.csv". Please provide your code for doing this in the code chunk below. Once you've done this, display the attributes of your data set using the str() function. 
+
+```{r }
+
+# Your code for reading in the data and changing variable types, if needed
+
+
+# Don't forget to display the data set attributes using the str() function!
+
+
+```
+
+## Question  5 - 10 points
+
+Fit a regression model with "TotHg" as the outcome variable and "fishmlwk" (numeric), "weight" (numeric), and "fishpart" (categorical) as predictor variables. Do not include interaction terms in this model. Please display the model output using the summary() function.
+
+```{r}
+
+# Code for your regression model and summary() output
+
+```
+
+Next, generate the diagnostic plots for this model and comment (1-3 sentences each) on what each plot implies about the model assumptions and/or the presence of data points that are outliers/influential points. 
+
+```{r}
+
+# Code to produce diagnostic plots
+
+```
+
+Comments about residual plot:
+
+Your answer here:
+
+Comments about QQ plot:
+
+Your answer here:
+
+Comments about standardized residual plot:
+
+Your answer here:
+
+Comments about leverage vs. residuals plot:
+
+Your answer here:
+
+Based on what you saw in these plots, are there any observations that you would consider removing? If so, which one/s?
+
+Your answer here:
+
+
+# Question 6 - 10 points
+
+There are several reasons to transform variables, one of which we will explore in this question. If the diagnostic plots indicate that the residuals are not normally distributed across the range of fitted values, one can apply a nonlinear transformation to the outcome variable to change the shape of the distribution of the residuals. A common method for doing this is the Box-Cox transformation. Dr. Cathy Durso offered the following explanation of this approach:
+
+"The Box-Cox transformations are a parametrized family of power transformations designed to be applied to the outcome variable to improve the Normality of residuals of a linear model. For $\lambda\neq0$, the transformation maps $y$ to $\frac{y^\lambda-1}{\lambda}$ while for $\lambda=0$, the tranformation maps $y$ to $\ln y$.
+
+For each value of $\lambda$ in the range of the argument "lambda", the "boxcox" function in the "MASS" package fits the linear model it is given as an argument but with the Box-Cox transformation applied to the outcome variable, assumed to be positive. The function "boxcox" computes the log likelihood of the residuals under the assumption of Normality. This is plotted against the $\lambda$'s and the $\lambda$'s and the corresponding log likelihoods are returned. In typical use, a value of $\lambda$ close to maximizing the log likelihood is chosen and regression performed with this transformation applied to the outcome variable."
+
+In this problem, you will walk through the steps of conducting a Box-Cox transformation. 
+
+#### Fitting the base model
+
+You start the process by fitting the model and examining the diagnostic plots to determine if there is non-normality in the model residuals. Run the code chunk below and examine the model output. 
+
+```{r}
+
+fish <- read.csv("fishermen_mercury.csv", header=TRUE, sep=",")  # You may need to change the file path on this line
+
+fish$fishpart_factor <- as.factor(fish$fishpart)
+
+fish.reg = lm(TotHg ~ fishmlwk + weight + fishpart_factor, data=fish)
+
+summary(fish.reg)
+
+plot(fish.reg)
+
+```
+
+#### Apply the boxcox() function from the MASS package (loaded at the beginning of this document) to your fitted model
+
+Run the code below and examine what it produces before moving on to the next part. 
+
+```{r}
+
+lambda<-boxcox(fish.reg)
+
+lambda
+
+```
+
+#### Obtain the $\lambda$ corresponding to the maximum profile log likelihood 
+
+The code below pulls the lambda for which the log likelihood is maximized. Run this code and examine what it produces before moving on to the next part. 
+
+```{r}
+
+ll.best<-which(lambda[[2]]==max(lambda[[2]]))
+
+ll.best
+
+lambda.best<-lambda[[1]][ll.best]
+
+lambda.best
+```
+
+
+#### Apply the transformation to the output variable and re-fit the model.
+
+Now that you have the lambda, you can now apply the Box-Cox transformation to your model. 
+
+# Transforming the outcome variable
+
+First, use lambda.best to transform the outcome variable. Save it as a new variable ("TotHg.BC") in the fish data set.
+
+```{r}
+
+# Your for creating transformed outcome variable 
+
+
+```
+
+Look at the first observation in the fish data set. The TotHg value for this observation is 4.484. What is the value of TotHg.BC for this same observation?
+
+Your answer here:
+
+# Re-fitting the regression model
+
+Next, re-fit the regression model from the very first step in the process. Keep the predictors the same, but use the transformed outcome (TotHg.BC) instead of the original outcome (TotHg). Display the output for this model.
+
+```{r}
+
+# Your for refitting the regression model here
+
+
+
+# Be sure to display the results using the summary() function!
+
+
+```
+
+
+# Display diagnostic plots for model with transformed outcome
+
+Finally, examine the diagnostic plots of the re-fitted model and compare them to the diagnostic plots of the original model. 
+
+```{r}
+
+# Display your new diagnostic plots here. Make sure they are visible in the knitted document
+
+
+```
+
+For your convenience, I've included code to produce the plots from the original model.
+
+```{r}
+
+plot(fish.reg) # Original model diagnostic plots
+
+```
+
+Compare the two QQ plots. Did the Box-Cox transformation noticeably improve the QQ plot for the fitted model?
+
+Your answer here: 
+
+

@@ -1,0 +1,235 @@
+---
+title: "Multiple Models"
+author: "C. Durso"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(MASS)
+library(leaps)
+library(ggpubr)
+```
+
+## Purpose
+
+The body measurement data can be used to estimate weight based on the remaining measurements. These measurements address the volume of the individual. As an application, the relation between weight and volume could be used to estimate lean body mass. Here, attention is restricted to measurements from female participants to allow for the possibility that body dimensions have a different relation to weight for different genders.
+
+There are many potential explanatory variables. A forward model, forward stepwise model, backward model, and backward stepwise model are fit using "height", all girth and diameter measurements, all squares of girth and diameter measurements, the product of "height" and the girth and diameter measurements, and the product of "height" and the squares of the girth and diameter measurements. Best subsets models of weight based on "height", the squares of the girth and diameter measurements, and the product of "height" and the squares of the girth and diameter measurements are fit for up to 12 variables.
+
+The performance of the models on multiple model fit criteria are recorded. These performance measures can be used in model selection.
+
+## Data
+
+The data are body measurements, age, and gender for a collection of physically active individuals.
+
+Measurements were initially taken by Grete 
+Heinz and Louis J. Peterson at San Jose State University and at the 
+U.S. Naval Postgraduate School in Monterey, California. Later, 
+measurements were taken at dozens of California health and fitness 
+clubs by technicians under the supervision of one of these authors.
+
+Downloaded 9/5/2019 from http://jse.amstat.org/datasets/body.dat.txt
+
+The variable names are supplied from the documentation at 
+http://jse.amstat.org/datasets/body.txt
+
+```{r}
+dat<-read.table("body.dat.txt")
+nam<-c("biacromial.diam","biiliac.diam", "bitrochanteric.diam","chest.depth","chest.diam", "elbow.diam","wrist.diam", "knee.diam","ankle.diam","shoulder.girth", "chest.girth", 
+ "waist.girth", "Navel.girth", "hip.girth","Thigh.girth", 
+"Bicep.girth", "Forearm.girth", "Knee.girth", "Calf.girth",
+"Ankle.girth", "Wrist.girth", "Age", "Weight", "height","Gender")
+nam<-str_to_lower(nam)
+names(dat)<-nam
+dat<-dat[dat$gender==0,] # restrict to female cases
+```
+
+Divide the data into a training set and a test set.  
+
+```{r}
+set.seed(34567)
+#set.seed(09876)
+index.train<-sample(1:nrow(dat),floor(nrow(dat)*.7),replace=FALSE)
+index.test<-setdiff(1:nrow(dat),index.train)
+
+dat.train<-dat[index.train,]
+dat.test<-dat[index.test,]
+
+# Rough checks on age balance
+
+qplot(dat.train$age)
+qplot(dat.test$age)
+
+```
+
+## Diameter to area
+
+Diameter (and girth) squared are area measurements. Multiplication by height gives measurement in volume units. Create a formula that gives "weight" interms of the girth and diameter measurements and their squares, height, and the interaction of the girth and diameter measurements with height.
+
+```{r}
+meas.w<-names(dat)[str_detect(names(dat),"diam|girth")]
+w<-str_c(meas.w,collapse="+")
+w.sq<-str_c("I(",meas.w,"^2)",collapse = "+")
+ws<-str_c("(",w,"+",w.sq,")")
+vol<-str_c("height*",ws)
+
+fmla<-as.formula(str_c("weight~",vol,sep=""))
+
+```
+
+## Forward models
+
+Use **step** to fit the forward model.
+Since lean body mass might vary systematically by age, this is not used as explanatory variable here. 
+
+The forward model is fit using the girth and diameter measurements and their squares, height, and the interaction of the girth and diameter measurements with height.
+
+```{r}
+
+forward.model<-step(lm(weight~1,data=dat.train),scope=fmla,
+                    direction="forward",trace=0)
+# forward.model<-step(lm(lpsa~1,data=dat),scope=fmla,direction="forward",trace=0)
+summary(forward.model)
+length(forward.model$coefficients)
+AIC(forward.model)
+extractAIC(forward.model)# this is the number in "step"
+```
+
+View some diagnostic plots.
+
+```{r}
+dat.diagnostic<-data.frame(resid=forward.model$residuals,
+                     stdresid=stdres(forward.model),
+                     fitted=forward.model$fitted.values,
+                     cook=cooks.distance(forward.model),
+                     gender=dat.train$gender)
+
+
+ggplot(dat.diagnostic,aes(x=fitted,y=resid))+geom_point()+
+  labs(title="Residual vs Fitted", y="residual")
+
+# Normal Q-Q plot
+ggqqplot(dat.diagnostic$stdresid)
+```
+
+Check for influential points.
+
+```{r}
+threshold<-qf(.5,summary(forward.model)$df[1],summary(forward.model)$df[2])
+sum(cooks.distance(forward.model)>threshold)
+max(cooks.distance(forward.model))
+```
+
+Consider $R^2$ and adjusted $R^2$ for the model. Both statistics are available from the model summary, but the formulas are interesting.
+
+```{r}
+#p=number of covariates, not including the intercept
+p<-summary(forward.model)$df[1]-1 
+
+n<-nrow(dat.train)
+
+r.sq<-1-
+  sum((dat.train$weight-forward.model$fitted.values)^2)/
+  sum((dat.train$weight-mean(dat.train$weight))^2)
+r.sq.adj<-1-
+  (sum((dat.train$weight-forward.model$fitted.values)^2)/(n-p-1))/
+  ((sum((dat.train$weight-mean(dat.train$weight))^2))/(n-1)) 
+(r2<-summary(forward.model)$r.squared)
+r.sq
+summary(forward.model)$adj.r.squared
+r.sq.adj
+r2-(1-r2)*(p)/(n-p-1) # adjusted r-squared in terms of r-squared
+```
+
+The forward stepwise model is fit using the same explanatory variables. Comparison of this model to the forward model is instructive.
+
+```{r}
+forward.stepwise.model<-step(lm(weight~1,data=dat.train),
+        scope=fmla, direction="both",trace=0)
+summary(forward.stepwise.model)
+```
+
+## Backward
+
+Backward and backward stepwise models are fit using the same data.
+
+```{r}
+backward.model<-step(lm(fmla,data=dat.train),
+                    direction="backward",trace=0)
+summary(backward.model)
+length(backward.model$coefficients)
+
+backward.stepwise.model<-step(lm(fmla,data=dat.train),
+                    direction="both",trace=0)
+summary(backward.stepwise.model)
+
+
+```
+
+## Best Subsets, basic
+
+Identify the best subset of explanatory variables for "weight" among height, the squares of the diameter and girth measurements, and the products of height with those squared terms.
+
+```{r}
+fmla.small<-as.formula(str_c("weight~","height*(",w.sq,")"))
+x<-model.matrix(fmla.small,dat.train)
+y<-dat.train$weight
+
+# This does take a noticeable time.
+best<-regsubsets(x=x[,2:ncol(x)],y=y,method="exhaustive",
+                   nvmax=12,nbest=1)
+
+subsets<-summary(best)$which
+qplot(1:length(summary(best)$bic),summary(best)$bic)
+```
+
+### Best subset model, BIC
+
+Assemble the formula for the best subset model with the number of variables that results in the minimum BIC value.
+
+```{r}
+best.subset.bic<-which(summary(best)$bic==min(summary(best)$bic))[1]
+varnames<-attr(subsets,"dimnames")[[2]]
+
+varnames[subsets[best.subset.bic,]] # more readable version of best row of subsets by BIC
+
+params<-varnames[subsets[best.subset.bic,]]
+fmla.best<-as.formula(paste("weight~",paste(params[-1],collapse="+") ))
+```
+
+Fit the best model.
+
+```{r}
+best.lm.bic<-lm(fmla.best,data=dat.train)
+	summary(best.lm.bic)
+
+```
+
+## Mean square error
+
+The mean squared error of the predictions of each of these models on the training set and on the test set is shown below.
+
+```{r}
+mean(forward.model$residuals^2)
+mean(forward.stepwise.model$residuals^2)
+mean(backward.model$residuals^2)
+mean(backward.stepwise.model$residuals^2)
+mean(best.lm.bic$residuals^2)
+
+mean((predict(forward.model,dat.test)-dat.test$weight)^2)
+mean((predict(forward.stepwise.model,dat.test)-dat.test$weight)^2)
+mean((predict(backward.model,dat.test)-dat.test$weight)^2)
+mean((predict(backward.stepwise.model,dat.test)-dat.test$weight)^2)
+mean((predict(best.lm.bic,dat.test)-dat.test$weight)^2)
+```
+
+## Robustness
+
+Robustness of the models selected and fit characteristics to other train/test breakdowns can be examined by changing the random seed. For a different random seed, hence different training data, the methods may produce different models with different fit statistics and different performance on the test data.
+
+
+

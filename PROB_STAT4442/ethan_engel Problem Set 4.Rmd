@@ -1,0 +1,258 @@
+---
+title: "Problem Set 4, Spring 2021"
+author: "Your name here"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=TRUE}
+
+# Load any packages, if any, that you use as part of your answers here
+# For example: 
+library(ggplot2)
+library(tidyverse)
+library(GGally)
+library(ggpubr)
+library(leaps) 
+
+```
+
+CONTEXT - DOUGHNUTS DATA
+
+As a reminder, I decided to conduct a factorial experiment inspired by the experiment conducted by Lowe (1935) to learn more about how much fat doughnuts absorb in different conditions. Like Lowe, I used four types of fats (fat_type). I also used three types of flour (flour_type): all-purpose flour, whole wheat flour, and gluten-free flour. Again like Lowe, I cooked six identical batches of doughnuts in each flour and fat combination. Each batch contained 24 doughnuts, and the total fat (in grams) absorbed by the doughnuts in each batch was recorded (sim_tot_fat).
+
+## Question 1 - Nested model testing (15 points)
+
+As previously noted, ANOVA is a special case of regression, so anything that can be done in the ANOVA framework can be done in some way in the regression framework. When conducting a two-way factorial ANOVA, you can test for main effects and the interaction between the two variables. When you coded this as a regression in the previous problem set, you ended up with a model with many coefficients associated with the interaction. You can, however, do an ANOVA-style all-at-once test of the interaction using nested model testing.
+
+
+# Set-up and model specification (5 points)
+
+First, load the data into memory and make the appropriate changes to the variables. 
+
+```{r}
+
+# Code for loading and setting up your data appropriately. 
+doughnuts.factorial <- read.csv("doughnutsfactorial.csv", header=TRUE, sep=",")
+doughnuts.factorial$fat_type_factor <- factor(doughnuts.factorial$fat_type)
+doughnuts.factorial$flour_type_factor <- factor(doughnuts.factorial$flour_type)
+doughnuts.factorial$sim_tot_fat<- as.numeric(doughnuts.factorial$sim_tot_fat)
+str(doughnuts.factorial)
+
+# Don't forget to display using the str() function!
+
+
+```
+
+Next, specify your two regression models. The first model will have just the vectors associated with main effects, and the second model will have both the main effects and interaction vectors. Please display the results of both using the summary() function.
+
+Main effects only:
+```{r}
+
+# Code for the regression model with main effects only
+doughnuts.reg = lm(sim_tot_fat ~ fat_type_factor+flour_type_factor, data=doughnuts.factorial)
+
+
+# Use the summary() function to display your results!
+
+summary(doughnuts.reg)
+```
+
+Main effects + interaction
+```{r}
+
+# Code for the regression model with main effects and interaction
+doughnuts.reg2=lm(sim_tot_fat ~ fat_type_factor*flour_type_factor, data=doughnuts.factorial)
+
+# Use the summary() function to display your results!
+summary(doughnuts.reg2)
+
+```
+
+# Comparing model statistics (5 points)
+
+Please answer the following questions about the two models:
+
+1) State and interpret the multiple R-square value of the main effects-only model.
+
+Your answer here: The multiple R-square value of the main effects-only model is .5426.  This means that about 54% of the variability of total fat absorption is accounted for by the model.  
+
+2) Looking at the adjusted R-square values of the two models, did the adjusted R-square for the model with the interaction vectors increase or decrease compared to the adjusted R-square of the main effects-only model?
+
+Your answer here: There was a slight decrease in adjusted R-Square from the main effects-only model to the model with the interaction vectors, from .508 to .493.
+
+3) Look at the results of the omnibus F-tests of both models. Please indicate which models (if any) accounted for significantly more variability in the amount of fat in the doughnuts than an intercept-only.
+
+Main effects-only model? (your answer here):With an F-statistic of 15.66 on 5 and 66 Degrees of Freedom and a p-value of 3.844e-10, the null hypothesis is adamantly rejected.  There is very compelling statistical evidence that the main effects-only model's set of predictor variables accounts for more variability in the amount of fat absorbed by the doughnuts than an intercept-only model.
+
+Model with interaction vectors? (your answer here):With an F-statistic of 7.275 on 11 and 60 Degrees of Freedom and a p-value of 1.026e-07, the null hypothesis is, again, adamantly rejected.  There is very compelling statistical evidence that the interaction-including model's set of predictor variables accounts for more variability in the amount of fat absorbed by the doughnuts than an intercept-only model.
+
+
+# Nested model testing (5 points)
+
+Finally, conduct the F-change test to determine if the interaction is significant and state what conclusion you reach (hint: make sure your degrees of freedom are positive):
+
+```{r}
+
+# Code for F-change test
+
+anova(doughnuts.reg, doughnuts.reg2)
+
+```
+
+Based on the results of the nested model test, what do you conclude about the including the interaction vectors in this model?
+
+Your answer here: With a low F value(.6741) and a high p-value(.671), the null hypothesis is not rejected.  There is no meaningful statistical evidence that including the interaction vectors accounts for more variability in fat absorption than the main effects-only model.
+
+
+
+------
+
+
+
+CONTEXT - FISHERMAN DATA (many thanks to Dr. Durso for obtaining this data set)
+
+Data Source: N.B. Al-Majed and M.R. Preston (2000). "Factors Influencing the Total
+Mercury and Methyl Mercury in the Hair of Fishermen in Kuwait," 
+Environmental Pollution, Vol. 109, pp. 239-250.
+
+   http://users.stat.ufl.edu/~winner/datasets.html, downloaded on 4/23/2019
+
+Description: Factors related to mercury levels among fishermen and a control
+group of non-fishermen.
+
+Variables (names of variables in the data set)
+
+Fisherman indicator ("fisherman"), categorical
+   0 = No
+   1 = Yes
+
+Age in years ("age"), continuous
+
+Residence Time in years ("restime"), continuous
+
+Height in cm ("height"), continuous 
+
+Weight in kg ("weight"), continuous
+
+Fish meals per week ("fishmlwk"), continuous
+
+Parts of fish consumed ("fishpart"), categorical
+    0 = none 
+    1 = muscle tissue only
+    2 = mt and sometimesvwhole fish 
+    3 = whole fish
+              
+Methyl Mercury in mg/g ("MeHg"), continuous
+
+Total Mercury in mg/g  ("TotHg"), continuous
+
+
+
+
+## Question 2 - Forward selection (10 points)
+
+Use forward selection to find the best set of predictors to predict the log of total mercury (note the transformation indicated here!). Be sure to include fisherman, age, restime, height, weight, fishmlwk, and fishpart in your pool of potential predictors. Be sure that the variables have the proper type before starting your work. Do not include MeHg in your set of predictors. Do not include interaction terms in your pool of potential predictors. 
+
+First, load the data into memory and change the variable types as appropriate. Please show the structure of your data in your knitted document by using the str() function.
+
+```{r}
+
+# Code for loading and setting up your data appropriately. These changes will apply to the next two questions as well, so you do not need to do this for the next two questions. 
+sakana <- read.csv("fishermen_mercury.csv", header=TRUE, sep=",")
+sakana$fisherman<- factor(sakana$fisherman)
+sakana$fishpart<- factor(sakana$fishpart)
+sakana$age<-as.numeric(sakana$age)
+sakana$height<-as.numeric(sakana$height)
+sakana$restime<-as.numeric(sakana$restime)
+sakana$fishmlwk<- as.numeric(sakana$fishmlwk)
+sakana$weight<- as.numeric(sakana$weight)
+sakana$logHg<-log(sakana$TotHg)
+
+
+# Don't forget to display using the str() function!
+str(sakana)
+
+```
+
+Next, conduct your forward selection. Be sure to include trace=1 in your function.
+
+```{r}
+
+# Code for conducting a forward selection
+fish_vars<-as.formula("logHg ~ fisherman + age + restime + height + weight + fishmlwk + fishpart")
+fish_forward<-step(lm(logHg~1,data=sakana),scope=fish_vars,
+direction="forward",trace=1)
+
+```
+
+Finally, display the final model using the summary() function.
+
+```{r}
+
+# Display the model selected by forward selection using the summary() function!
+summary(fish_forward)
+
+```
+
+## Question 3 - Backward selection (10 points)
+
+Use backward selection to find the best set of predictors to predict the log of total mercury (note the transformation indicated here!). Be sure to include fisherman, age, restime, height, weight, fishmlwk, and fishpart in your pool of potential predictors. Be sure that the variables have the proper type before starting your work. Do not include MeHg in your set of predictors. Do not include interaction terms in your pool of potential predictors.  predictors. 
+
+
+First, conduct your backward selection. Be sure to include trace=1 in your function.
+
+```{r}
+
+# Code for conducting a backward selection
+fish.min<-as.formula("logHg~1")
+
+fish_backward<-step(lm(fish_vars,data=sakana),scope=fish.min,
+direction="backward",trace=1)
+
+```
+
+Next, display the final model using the summary() function.
+
+```{r}
+
+# Display the model selected by backward selection using the summary() function!
+summary(fish_backward)
+
+```
+
+## Question 4 - Best subsets selection (10 points)
+
+Use best subsets selection to find the best set of predictors to predict the log of total mercury (note the transformation indicated here!). Be sure to include fisherman, age, restime, height, weight, fishmlwk, and fishpart in your pool of potential predictors. Be sure that the variables have the proper type before starting your work. Do not include MeHg in your set of predictors. Do not include interaction terms in your pool of potential predictors. 
+
+First, conduct your best subsets selection.
+
+```{r}
+
+# Code for conducting a best subsets selection
+x<-model.matrix(as.formula("logHg ~ fisherman + age + restime + height + weight + fishmlwk + fishpart"),sakana)
+y<-sakana$logHg
+fish_best<-regsubsets(x=x[,2:ncol(x)],y=y,method="exhaustive",nbest=1)
+
+```
+
+Next, display the final model using the summary() function.
+
+```{r}
+
+# Display the model selected by best subsets selection using the summary() function!
+summary(fish_best)
+BICs<-summary(fish_best)$bic
+qs<-1:length(BICs)+2
+n<-nrow(sakana)
+AICs<-BICs-log(n)*qs+2*qs
+qplot(1:length(AICs),AICs)
+
+```
+
+## Question 5 - 5 points
+
+Were there any differences between the predictors in the models chosen by the three different automated model selection methods? If so, how did they differ?
+
+Your answer here: All three model selection methods ended up with the same resultant model.  The predictor variables that are to be included in the resulting models are the fishermen's weight(weight) and the categorical variable "parts of fish consumed" (fishpart).

@@ -1,0 +1,71 @@
+---
+title: "Poisson Best Subsets Regression"
+author: "C. Durso"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(bestglm)
+```
+
+## Introduction
+
+The data set "cells.csv" from Crawley, Statistics: an Introduction using R gives the number of abnormal cells in samples from individuals with additional data provided. The goal here is to fit a best subset model according to BIC for Poisson regression model on the training data set with all pairwise interactions and to assess the performance using log likelihood on a test set.
+
+
+## Data
+
+```{r, cache=TRUE}
+
+dat<-read.csv("cells.csv")
+X<-model.matrix(as.formula("cells~smoker+sex+age+weight"),
+                data=dat)
+X<-X[,-1]
+Y<-dat$cells
+
+X<-cbind(X,Y)
+X<-data.frame(X)
+names(X)[ncol(X)]<-"cells"
+
+set.seed(3456787)
+train.ind<-sample(1:nrow(dat),round(.7*nrow(dat)))
+test.ind<-setdiff(1:nrow(dat),train.ind)
+
+dat.train<-X[train.ind,]
+dat.test<-X[test.ind,]
+```
+
+
+### Best subset model, BIC
+
+Fit a best subset model according to the BIC on the training data. Due to algorithmic limitations, the models use just the original variables.
+
+```{r}
+set.seed(3456787)
+poissbest<-bestglm(dat.train, IC="BIC", family=poisson)
+m.poiss<-poissbest$BestModel
+summary(m.poiss)
+```
+
+### Log Likelihood
+
+Calculate the log likelihood of this model on the training data.
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+

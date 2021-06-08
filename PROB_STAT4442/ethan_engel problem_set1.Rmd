@@ -1,0 +1,143 @@
+---
+title: "Problem Set 1, Spring 2021"
+author: "Wendy Christensen"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+
+# Load any packages, if any, that you use as part of your answers here
+
+# For example: 
+library(ggplot2)
+#install.packages("onewaytests")
+library(onewaytests)
+```
+
+The data used for this problem set comes from the Snedecor & Cochran text (p. 218), which was derived from an experiment conducted by Lowe (1935). Lowe wanted to learn more about how much fat doughnuts absorb when cooked in different kinds of fat. He tested four kinds of fats (fat_type). He cooked six identical batches of doughnuts using each type of fat. Each batch contained 24 doughnuts, and the total fat (in grams) absorbed by the doughnuts in each batch was recorded (total_fat)
+
+Loading the data:
+
+```{r }
+
+doughnuts <- read.csv("doughnuts.csv",header=TRUE,sep=",") # Loads the CSV file into memory. You may need to adapt this line to work on your computer
+
+
+doughnuts$fat_type_factor <- factor(doughnuts$ï..fat_type) # Creates a new variable and tells R that the values are categorical ("factor")
+doughnuts
+
+```
+
+## Question 1 - 10 points
+
+Compute the mean and standard deviation (hint: you have sample data, not population data) for each group, and then create a bar plot to visually display the means. 
+
+```{r }
+
+# Compute group means
+doughnut_means<-tapply(doughnuts$total_fat, doughnuts$fat_type_factor, mean)
+doughnut_means
+
+# Compute standard deviations for each group
+
+tapply(doughnuts$total_fat, doughnuts$fat_type_factor, sd)
+
+# Code for visualization - be sure to display the visualization/s
+
+barplot(doughnut_means)
+
+
+```
+
+
+## Question 2 - 10 points
+
+Assess the assumption of normality visually and quantitatively and comment on how well the data met this assumption.
+
+```{r }
+
+# Code for visual assessment - be sure to display the visualization/s
+ggplot(doughnuts, aes(sample=total_fat))+stat_qq()+stat_qq_line()+facet_wrap( ~ fat_type_factor)
+
+
+# Code for quantitative assessment
+with(doughnuts, tapply(total_fat, fat_type_factor, shapiro.test))
+
+
+
+```
+
+# Write your comments about how well the data meet the normality assumption below:  
+In the qqplots, all four of the graphs are reasonably linear, enough to maintain the normality assumption.  This fact is numerically supported by the p-values from the Shapiro-Wilk Test, the lowest of which is approximately .31.  This would suggest that the data is consistent with samples from Normal populations.
+
+
+
+
+## Question 3 - 10 points
+
+Assess the assumption of equality of variances visually and quantitatively and comment on how well the data met this assumption.
+
+```{r }
+
+
+# Code for visual assessment - be sure to display the visualization/s
+ggplot(dat=doughnuts,aes(x=fat_type_factor,y=total_fat))+geom_boxplot()+geom_point()
+
+
+# Code for quantitative assessment
+bf.test(total_fat ~ fat_type_factor, data = doughnuts)
+
+```
+
+
+# Write your comments about how well the data meet the equality of variances assumption below:  
+The equality of variances assumption for this data is tenuous, at best.  Fat factor 1 has a visibly larger overall range than the other 3 factors, while factor 3 has a more compressed IQR.  This, in conjunction with the p value of < .01 on the Brown-Forsyth Test suggest that the equal variance assumption may not be met.
+
+
+
+## Question 4 - 10 points
+
+Regardless of assumptions, conduct a one-way ANOVA and interpret the result in the context of the research question. Please be sure to display your ANOVA results using the summary() function.
+
+```{r }
+
+# Code for the ANOVA 
+doughnut.anova<-aov(total_fat~fat_type_factor,data=doughnuts)
+summary(doughnut.anova)
+
+# Don't forget to display the results using the summary() function!
+
+```
+
+# Write your interpretation of the results below:
+
+The absence of the equal variance assumption notwithstanding, given the F value of 5.406 and the p value < .01, we are inclined to reject the null hypothesis at the alpha .01 level.  There is compelling statistical evidence that the mean quantity of fat absorption differs between the fat types.
+
+
+## Question 5 - 10 points
+
+When the null hypothesis in ANOVA is rejected, you conclude that at least one group mean is different than the others. You may then wonder which of the means is different. There are numerous tests that have been developed to answer this question. These are sometimes referred to as "post hoc" tests because they are usually done after an ANOVA has returned a signficant result. For this question, you will do two things:
+
+1) Do some reading on your own to find a post hoc test that is appropriate for use after an ANOVA. There are numerous tests available, but you only need to pick one.
+
+# Write your choice of ANOVA post hoc test below:
+The Tukey Test has been run to see the more specific pairwise results of the dughnut fat absorption experiment.
+
+
+2) Conduct this post hoc test on the doughtnuts data and determine which mean/s are different.
+
+```{r }
+
+# Code for the post hoc test of your choice
+
+# Be sure to display your results as appropriate for your chosen method
+doughnut.tukey <- TukeyHSD(x=doughnut.anova, 'fat_type_factor', conf.level=0.95)
+plot(doughnut.tukey , las=1)
+```
+
+# Write your determination about which mean/s are different below:
+Generally speaking, fat factor 4 absorbs less fat than the other 3, while fat factor 2 absorbs more than the other 3.  This leads to the 4-2 pairwise difference comparison not capturing the zero at the 95% confidence level.  Factors 4 & 2 appear to have mean absorption rates that significantly differ at this level of confidence.
+
+

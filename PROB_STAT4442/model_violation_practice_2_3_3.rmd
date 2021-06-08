@@ -1,0 +1,140 @@
+---
+title: "Model Violation Examples"
+author: "C. Durso"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+# Purpose
+
+In the first model of each example, the outcome variable has an unmodeled dependence on a variable that is supplied in the second model of the example. The examples illustrate the extent to which typical diagnostic plots provide alerts to unmodeled dependencies.
+
+## Example I
+
+In this example, a regression model for hip girth is calculated based on biiliac diameter (colloquially, the distance between the points of the hips) and gender.
+
+### Data
+
+The data are body measurements, age, and gender for a collection of physically active individuals.
+
+Measurements were initially taken by Grete 
+Heinz and Louis J. Peterson at San Jose State University and at the 
+U.S. Naval Postgraduate School in Monterey, California. Later, 
+measurements were taken at dozens of California health and fitness 
+clubs by technicians under the supervision of one of these authors.
+
+Downloaded 9/5/2019 from http://jse.amstat.org/datasets/body.dat.txt
+
+The variable names are supplied from the documentation at 
+http://jse.amstat.org/datasets/body.txt
+
+```{r}
+dat<-read.table("body.dat.txt")
+nam<-c("biacromial.diameter","biiliac.diam", "bitrochanteric.diam","chest.depth","chest.diam", "elbow.diam","wrist.diam", "knee.diam","ankle.diam","shoulder.girth", "chest.girth", 
+ "waist.girth", "Navel.girth", "hip.girth","Thigh.girth", 
+"Bicep.girth", "Forearm.girth", "Knee.girth", "Calf.girth",
+"Ankle .girth", "Wrist.girth", "Age", "Weight", "height","Gender")
+nam<-str_to_lower(nam)
+names(dat)<-nam
+dat
+```
+
+### Models
+
+First fit a model of "hip.girth" as a linear function of "biiliac.diam" and gender. View the diagnostic plots.
+
+```{r}
+
+m.hip<-lm(hip.girth~biiliac.diam+gender,data=dat)
+summary(m.hip)
+plot(m.hip)
+```
+
+Next, fit a linear regression model of "hip.girth" as a linear function of "biiliac.diam", the square of "biiliac.diam", and "gender". View the diagnostic plots. 
+
+```{r}
+m.hip.2<-lm(hip.girth~biiliac.diam+I(biiliac.diam^2)+gender,data=dat)
+# The "I()" syntax causes symbols to be given their algebraic 
+# interpretation, rather than their interpretation in formulas.
+
+summary(m.hip.2)
+plot(m.hip.2)
+```
+
+Note that the larger model is a statistically significant improvement on the original, as indicated by the "anova" model comparison test
+
+```{r}
+anova(m.hip,m.hip.2)
+```
+
+### Questions
+
+Does the model summary for the first model alert the analyst that there's an unmodeled nonlinear term?
+
+Do the diagnostic plots for the first model alert the analyst that there's an unmodeled nonlinear term?
+
+### Aside
+(The same fit is obtained if the "biiliac.diam" variable is scaled before squaring. This is customary in some fields because it reduces the correlation between the original and the square.)
+
+
+```{r}
+temp<-dat
+temp$biiliac.diam.scaled<-scale(temp$biiliac.diam)
+temp$biiliac.sq<-temp$biiliac.diam.scaled^2
+
+m.hip.2b<-lm(hip.girth~biiliac.diam.scaled+biiliac.sq+gender,data=temp)
+summary(m.hip.2b)
+# Note the two quadratic models have the same fitted values.
+all.equal(m.hip.2b$fitted,m.hip.2$fitted) 
+
+```
+
+## Example II
+
+In this example, "navel.girth" is modeled as a linear function of the ratio of "weight" to "height" and of "age". Intuition might suggest that "gender" may also be related. This variable is included in the second model in the example.
+
+This example uses the same data as Example I. 
+
+
+### Models
+
+Fit a linear regression of "navel.girth" on the ratio of "weight" to "height" and on "age".  View the diagnostic plots.
+
+```{r}
+m.navel<-lm(navel.girth~I(weight/height)+age,data=dat)
+summary(m.navel)
+plot(m.navel)
+```
+
+Fit a linear regression of "navel.girth" on the ratio of "weight" to "height", "age", and "gender".  View the diagnostic plots.
+
+```{r}
+m.navel.g<-lm(navel.girth~(I(weight/height)+age)*gender,data=dat)
+# The "*" syntax indicates that the variables I(weight/height),
+# age, and gender should be used, along with the products
+# (weight/height)(gender) and (age)(gender).
+# Because gender is coded 0=female, 1=male, the coefficents of
+# (weight/height)(gender) and (age)(gender) give adjustments to
+# the estimate in the case of a male subject.
+summary(m.navel.g)
+plot(m.navel.g)
+```
+
+Note that the larger model is a statistically significant improvement on the smaller model.
+
+```{r}
+anova(m.navel,m.navel.g)
+```
+
+### Questions
+
+Does the model summary for the first model alert the analyst that there's an unmodeled categorical association?
+
+Do the diagnostic plots for the first model alert the analyst that there's an unmodeled categorical association?
+

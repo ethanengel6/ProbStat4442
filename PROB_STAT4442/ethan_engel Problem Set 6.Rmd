@@ -1,0 +1,391 @@
+---
+title: "Problem Set 6, Spring 2021"
+author: "Wendy Christensen"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load any packages, if any, that you use as part of your answers here
+# For example: 
+library(tidyverse)
+
+
+```
+
+CONTEXT: Pew Research Center data
+
+The data in "pew_data.RData" comes from the Pew Research Center, an organization that conducts nationally-representative public opinion polls on a variety of political and social topics. Dr. Durso constructed this data set from the 2017 Pew Research Center Science and NewsSurvey, downloaded from https://www.journalism.org/datasets/2018/ on 4/16/2019. 
+
+The variable "LIFE" contains the responses of participants to the following question:
+
+"In general, would you say life in America today is better, worse or about the same as it was 50 years ago for people like you?"
+  
+1 = Better today
+
+2 = Worse today
+
+3 = About the same as it was 50 years ago
+
+-1 = Refused
+
+You will use the pew data set again for these questions, but the set of variables will be different than those used in Problem Set 5. The data for these questions is in a data set called "pew2". Please run the code chunk below before starting this problem set (you will need the tidyverse package loaded into memory before running this chunk)
+
+```{r}
+
+# Your working directory will need to be set to where the pew_data.RData is located on your computer
+
+load("pew_data.RData")
+pew2<-dplyr::select(dat,AGE,PPREG4,PPWORK,PPINCIMP,PPGENDER,PPETHM,IDEO,PPEDUCAT,LIFE, KNOWLEDGE,ENJOY,SNSUSE,SNSFREQ)
+
+```
+
+
+## Question 1 - 5 points
+
+In this problem set, you will conduct a "complete case" analysis. That is, there will be no missing data in your data set at the start of your analysis. Missing values in R are denoted "NA". However, not all NAs are created equal!
+
+Two of the new variables relate to use of social media. SNSUSE asks if the participant uses social media, and SNSFREQ asks how frequently the participant uses social media. Many of the NAs in this data set come from people who responded that they did not use social media; that is, although the responses are denoted NA, these responses are not truly missing. Therefore, such respondents should be included in the complete case analysis.  
+
+Examine the output produced by the following chunk and answer the questions.
+
+```{r}
+
+attributes(pew2$SNSUSE)
+table(pew2$SNSUSE, exclude = NULL) # Exclude argument allows for NAs to be displayed and counted
+
+attributes(pew2$SNSFREQ)
+table(pew2$SNSFREQ, exclude = NULL)
+
+```
+
+1) How many people reported not using social media?
+
+Your answer here: There were 1257 people in the sample who reported not using social media.
+
+2) How many people had responses recorded as NAs for the SNSFREQ variable?
+
+Your answer here: There were a total of 1269 NAs for the SNSFREQ variable, 1257 who answered no to social media use, plus 12 who refused to answer.
+
+Now that you've examined the variables, recode all NAs in SNSFREQ to 6 if the participant responded "no" to the SNSUSE variable. 
+
+```{r}
+
+# Your code for recoding SNSFREQ
+pew2$SNSFREQ[pew2$SNSUSE==2]<-6
+
+
+```
+
+To verify that you recoded SNSFREQ properly, display a table showing the counts of the responses to SNSFREQ. Be sure that NAs are included in the count and that they are shown in your knitted document. Once you've done this, answer the question below.
+
+```{r}
+
+# Your code showing a table of counts for the recoded SNSFREQ variable
+attributes(pew2$SNSFREQ)
+table(pew2$SNSFREQ, exclude = NULL)
+```
+
+3) Does the number of 6's in the recoded SNSFREQ variable match the number of people who reported not using social media?
+
+Your answer here: Yes, now they are each 1257.
+
+
+
+## Question 2 - 10 points 
+
+Be sure that you have completed Question 1 before starting this question, and then do the following steps *in order*:
+
+First, count the number of observations (i.e., rows) in your data set. Once you've done so, answer the question below this code chunk.
+
+```{r}
+
+# Your code here to count the number of rows
+count(pew2)
+```
+
+1) How many rows are currently present in your data set?
+
+Your answer here: n=4024
+
+
+Next, we need to identify missing values in our data set. Before writing any code to drop these variables, it helps to manually inspect your data to see what values should be considered missing. Examine your variables (including the LIFE variable) to see what responses correspond to missing values The attributes() and table() functions are useful for this, and examples of their use are shown in the previous question. Along with NAs, also consider labels such as "Not asked" and "Refused" as missing. Once you've done so, answer the three questions below this code chunk.
+
+```{r}
+
+# Your code for variable examination here 
+head(pew2)
+attributes(pew2$AGE)
+table(pew2$AGE, exclude = NULL)
+attributes(pew2$PPREG4)
+table(pew2$PPREG4, exclude = NULL)
+attributes(pew2$PPWORK)
+table(pew2$PPWORK, exclude = NULL)
+attributes(pew2$PPINCIMP)
+table(pew2$PPINCIMP, exclude = NULL)
+attributes(pew2$PPGENDER)
+table(pew2$PPGENDER, exclude = NULL)
+attributes(pew2$PPETHM)
+table(pew2$PPETHM, exclude = NULL)
+attributes(pew2$IDEO)
+table(pew2$IDEO, exclude = NULL)
+attributes(pew2$PPEDUCAT)
+table(pew2$PPEDUCAT, exclude = NULL)
+attributes(pew2$LIFE)
+table(pew2$LIFE, exclude = NULL)
+attributes(pew2$KNOWLEDGE)
+table(pew2$KNOWLEDGE, exclude = NULL)
+attributes(pew2$ENJOY)
+table(pew2$ENJOY, exclude = NULL)
+attributes(pew2$SNSUSE)
+table(pew2$SNSUSE, exclude = NULL)
+attributes(pew2$SNSFREQ)
+table(pew2$SNSFREQ, exclude = NULL)
+```
+
+2) How many missing values (NAs, "not asked", or "refused") are present for the recoded SNSFREQ variable? 
+
+Your answer here: There were a total of 18 (6 refused & 12 NAs).
+
+3) How many missing values (NAs, "not asked", or "refused") are present for the AGE variable?
+
+Your answer here:There are no missing values for the AGE variable.
+
+4) How many missing values (NAs, "not asked", or "refused") are present for the IDEO variable? 
+
+Your answer here:There were 116 in the IDEO variable category who refused to answer, other than that, all gave a valid response.
+
+
+Now that you know what values should be counted as missing, set these responses equal to "NA". 
+
+```{r}
+
+# Your code for setting all responses that are considered missing to NA here
+pew2$IDEO[pew2$IDEO==-1]<-NA
+pew2$LIFE[pew2$LIFE==-1]<-NA
+pew2$KNOWLEDGE[pew2$KNOWLEDGE==-1]<-NA
+pew2$ENJOY[pew2$ENJOY==-1]<-NA
+pew2$SNSUSE[pew2$SNSUSE==-1]<-NA
+pew2$SNSFREQ[pew2$SNSFREQ==-1]<-NA
+```
+
+Once you've set everything that's missing equal to NA, drop all rows that contain at least one NA. 
+
+```{r}
+
+# Your code for dropping all observations with at least one NA here
+pew2 <- na.omit(pew2)  
+
+```
+
+Finally, count the number of rows again and answer the question below the code chunk. This is the final sample size for your complete cases analysis. 
+
+```{r}
+
+# Your code here
+count(pew2)
+```
+
+5) How many rows are now present in your data set?
+
+Your answer here:n=3836
+
+
+One more thing: We recoded the SNSFREQ variable to have a value of 6 if SNSUSE was missing. We could do one of two things at this point. The first thing we could do (and what we will do in this case) is leave it as it is. Because we will treat SNSFREQ as a categorical variable, the value of 6 becomes just a label for a category (i.e., just another dummy vector), which we can conceptualize of as a "never" category for social media use frequency. This wouldn't work if it were a numeric variable; in such a case, we would want change the number placeholder back to NA to ensure that the arbitrary value isn't used as part of estimating a coefficient for a numeric variable. 
+
+## Question 3 - 5 points
+
+Be sure that you have completed all parts of Question 2 and have the results of all prior code chunks in memory before starting this question.
+
+1) Recode the LIFE variable such that "Worse today" equals 1 and the other responses are equal to zero. 
+2) Change the variables to the appropriate variable type:
+   - Continuous: AGE, PPINCIMP
+   - Categorical: all others
+
+```{r}
+
+# Your data processing code here
+pew2$LIFE[pew2$LIFE==1]<-0
+pew2$LIFE[pew2$LIFE==3]<-0
+pew2$LIFE[pew2$LIFE==2]<-1
+pew2$AGE<-as.numeric(pew2$AGE)
+pew2$PPINCIMP<-as.numeric(pew2$PPINCIMP)
+pew2$PPREG4<-as.factor(pew2$PPREG4)
+pew2$PPWORK<-as.factor(pew2$PPWORK)
+pew2$PPGENDER<-as.factor(pew2$PPGENDER)
+pew2$PPETHM<-as.factor(pew2$PPETHM)
+pew2$IDEO<-as.factor(pew2$IDEO)
+pew2$PPEDUCAT<-as.factor(pew2$PPEDUCAT)
+pew2$KNOWLEDGE<-as.factor(pew2$KNOWLEDGE)
+pew2$ENJOY<-as.factor(pew2$ENJOY)
+pew2$SNSUSE<-as.factor(pew2$SNSUSE)
+pew2$SNSFREQ<-as.factor(pew2$SNSFREQ)
+
+```
+
+To confirm that you recoded the LIFE variable correctly, display a table showing the counts of the binarized LIFE variable
+
+```{r}
+
+# Your code showing a table of counts for the recoded LIFE variable here
+
+table(pew2$LIFE, exclude = NULL)
+
+```
+
+1) Per your table, how many people responded "worse today" to the life question?
+
+Your answer here: "worse today" = 1803 respondents
+
+1) Per your table, how many people responded something other than "worse today" to the life question?
+
+Your answer here: Other than "worse today"=2033 respondents
+
+
+## Question 4 - 5 points
+
+Split your data set into training, validation, and test sets. Use the following proportions: 70% training, 15% validation, and 15% test. To make your split reproducable, be sure to incorporate the random seed included in the code chunk in an appropriate place in your code.
+
+```{r}
+
+# Your code for splitting into training, validation, and test sets here
+
+
+set.seed(123456) # makes reproducable split
+n<-nrow(pew2)
+pew2_tvt<-sample(rep(0:2,c(round(n*.15),round(n*.15),n-2*round(n*.15))),n)
+pew2.train<-pew2[pew2_tvt==2,]
+pew2.valid<-pew2[pew2_tvt==1,]
+pew2.test<-pew2[pew2_tvt==0,]
+count(pew2.train)
+count(pew2.valid)
+count(pew2.test)
+```
+
+1) How many observations are in your training set?
+
+Your answer here: Training set; n=2686
+
+2) How many observations are in your validation set?
+
+Your answer here:Validation set; n=575
+
+3) How many observations are in your test set?
+
+Your answer here:Test set; n=575
+
+
+## Question 5 - 5 points
+
+Develop a set of candidate models by using forward selection to fit a series of logistic regression model using the binarization of LIFE as the outcome and all other variables in the data set as potential predictors. Use the data in the training set for this. Display each step of the forward selection by including "trace=1" as an argument in your step() function.
+
+```{r}
+
+# Code for your forward selection here
+pew2_vars<-as.formula("LIFE ~ AGE + PPREG4 + PPWORK + PPINCIMP + PPGENDER + PPETHM + IDEO+ PPEDUCAT + KNOWLEDGE + ENJOY + SNSUSE + SNSFREQ")
+pew2_forward<-step(glm(LIFE~1,data=pew2.train, family="binomial"),scope=pew2_vars,
+direction="forward",trace=1)
+pew2_forward
+```
+
+Now, save each of the models that appeared as steps in your forward selection as model objects. You will need these for the next question.
+
+```{r}
+
+# Code for saving each of your forward selection model steps as separate model objects
+pew2model1<-glm(LIFE~1,data=pew2.train,family="binomial")
+pew2model2<-glm(LIFE~PPINCIMP,data=pew2.train,family="binomial")
+pew2model3<-glm(LIFE~PPINCIMP+PPEDUCAT,data=pew2.train,family="binomial")
+pew2model4<-glm(LIFE~PPINCIMP+PPEDUCAT+IDEO,data=pew2.train,family="binomial")
+pew2model5<-glm(LIFE~PPINCIMP+PPEDUCAT+IDEO+PPGENDER,data=pew2.train,family="binomial")
+pew2model6<-glm(LIFE~PPINCIMP+PPEDUCAT+IDEO+PPGENDER+PPREG4,data=pew2.train,family="binomial")
+pew2model7<-glm(LIFE~PPINCIMP+PPEDUCAT+IDEO+PPGENDER+PPREG4+SNSUSE,data=pew2.train,family="binomial")
+pew2model8<-glm(LIFE~PPINCIMP+PPEDUCAT+IDEO+PPGENDER+PPREG4+SNSUSE+KNOWLEDGE,data=pew2.train,family="binomial")
+pew2model9<-glm(LIFE~PPINCIMP+PPEDUCAT+IDEO+PPGENDER+PPREG4+SNSUSE+KNOWLEDGE+PPETHM,data=pew2.train,family="binomial")
+models_list<-list(pew2model1,pew2model2,pew2model3,pew2model4,pew2model5,pew2model6,pew2model7,pew2model8,pew2model9)
+```
+
+
+## Question 6 - 10 points
+
+Using the model objects you saved in the last question, compute the deviances of these models when applied to the validation data set. (Hint: there is a good example of this in the async material in 5.2.1: backward_train_validate_test_5_2_1). 
+
+```{r}
+
+# Your code here computing validation set deviances
+pew2.valid.dev<-function(pew2.pred, pew2.dat){
+  pred.m<-predict(pew2.pred,pew2.dat, type="response")
+-2*sum(pew2.dat$LIFE*log(pred.m)+(1-pew2.dat$LIFE)*log(1-pred.m))}
+pew2_validation_deviances<-sapply(models_list,pew2.valid.dev,pew2.dat=pew2.valid)
+
+```
+
+Once you've computed the validation deviances, display the deviances for each model. Make sure that these are visible in your knitted document. After doing this, answer the following four questions. 
+
+```{r}
+
+# Your code here for displaying validation set deviances
+pew.devs<-data.frame(size=length(pew2_validation_deviances):1,
+validation.deviance=pew2_validation_deviances)
+
+ggplot(data=pew.devs, aes(x=size,y=validation.deviance))+geom_point()
+pew.devs
+```
+
+1) What is the validation deviance of the single-predictor model (intercept + first chosen predictor in the forward selection)?
+
+Your answer here:Validation Deviance of pew2model2=774.0455
+
+2) What is the validation deviance of the model with the most predictors (the last model fit in the forward selection)?
+
+Your answer here:Validation Deviance of pew2model9=792.036
+
+3) Which of the models had the lowest validation deviance?
+
+Your answer here:Pew2model6(LIFE ~ PPINCIMP + PPEDUCAT + IDEO + PPGENDER + PPREG4) had a validation deviance of 767.713, the lowest of the 9.
+
+4) Based on the validation deviances you computed, which model do you choose based on the results you obtained?
+
+Your answer here:  Since pew2model6, the model with five predictor variables, has the lowest validation deviance value, that would indicate that it fits at least as well as any of the other models produced by the forward selection.
+
+
+## Question 7 - 10 points
+
+Please assess the performance of the model you chose in Question 6 as applied to the test data set. Please include a confusion matrix and compute accuracy, precision, recall, and F1 score for this model. Once you've constructed the confusion matrix and computed the model fit indices, answer the four question below. 
+
+```{r}
+
+# Your code here for the confusion matrix and computing accuracy, precision, recall, and F1 score
+model6.probs<-predict(pew2model6,pew2.test,type="response")
+model6preds<-ifelse(model6.probs>0.5,1,0)
+model6confmat<-table(model6preds,pew2.test$LIFE)
+model6confmat
+model6accuracy<-(model6confmat[1,1]+model6confmat[2,2])/(model6confmat[1,1]+model6confmat[1,2]+model6confmat[2,1]+model6confmat[2,2])
+model6accuracy
+model6precision<-model6confmat[2,2]/(model6confmat[2,1]+model6confmat[2,2])
+model6precision
+model6recall<-model6confmat[2,2]/(model6confmat[1,2]+model6confmat[2,2])
+model6recall
+model6f1<-2*(model6precision*model6recall)/(model6precision+model6recall)
+model6f1
+
+```
+
+What was the model's accuracy on the test set data?
+
+Your answer here: model6accuracy=0.5582609
+
+What was the model's precision on the test set data?
+
+Your answer here:model6precision=0.53125
+
+What was the model's recall on the test set data?
+
+Your answer here:model6recall=0.5037037
+
+What was the model's F1 score on the test set data?
+
+Your answer here:model6f1=0.5171103

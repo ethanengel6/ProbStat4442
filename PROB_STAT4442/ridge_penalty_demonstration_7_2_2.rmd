@@ -1,0 +1,204 @@
+---
+title: "Ridge Regression Concept"
+author: "C. Durso"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(glmnet)
+```
+
+## Introduction
+
+The goal of this document is to illustrate the theoretical computations of ridge regression in a simple example.
+
+## Simulate Correlated Data
+
+Generate a simulated a data set with highly correlated explanatory variables.
+```{r}
+set.seed(34567)
+x1<-scale(rnorm(50))
+x2<-scale(rnorm(50,x1,.1))
+qplot(x1,x2)
+y<-x1+2*x2+rnorm(50,1)
+y<-y-mean(y)
+cor(cbind(x1,x2,y))
+```
+
+Note the highly significant regression with inaccurate, barely significant coefficients, despite the highly significant regression with high $R^2$.
+
+```{r}
+m<-lm(y~x1+x2)
+summary(m)
+```
+
+## Ridge Regression
+
+The coefficients make somewhat more sense.
+
+```{r}
+X<-cbind(x1,x2)
+set.seed(567)
+cvfit = cv.glmnet(x=X, y=y,alpha=0)
+plot(cvfit)
+cvfit$lambda.min
+coef(cvfit, s = "lambda.min")
+cvfit$lambda.1se
+coef(cvfit, s = "lambda.1se")
+
+```
+
+
+## In Theory-Based Steps
+
+Compute the singular value decomposition of the design matrix X. Because the outcome variable has been centered, the column of 1's for the intercept is omitted.
+
+```{r}
+prod<-svd(X)
+(u<-prod$u)[1:10,]
+(v<-prod$v)
+(d<-diag(prod$d))
+```
+
+Check that the decomposition reproduces $\mathbf X$.
+
+```{r}
+max(abs(u%*%d%*%t(v)-X))
+```
+
+Verify that columns of $\mathbf u$ are orthonormal and the columns of $\mathbf v$ are orthonormal.
+
+```{r}
+t(u)%*%u
+t(v)%*%v
+```
+
+Verify that the columns of $\mathbf v$ are eigenvectors of $\mathbf X^T\mathbf X$
+
+```{r}
+ev<-eigen(t(X)%*%X)
+ev$values
+
+t(X)%*%X%*%v[,1]/v[,1]
+t(X)%*%X%*%v[,2]/v[,2]
+
+```
+
+### The OLS approximation of y:
+
+The approximation is the projection of y onto the column space of X.
+
+```{r}
+
+
+Xb<-X%*%m$coefficients[2:3] # Predicted values of y
+max(y-Xb)
+max(t(X)%*%(y-Xb)) # orthogonal
+
+Xb.2<-u%*%t(u)%*%y # Predicted values of y using svd
+
+max(Xb-Xb.2) # Nearly 0
+
+```
+
+### The ridge approximation of y:
+
+The coefficients of y in u-coordinates are shrunk relative to the OLS approximation.
+
+```{r}
+
+lambda<-5
+
+Xb.ridge<-u%*%d%*%solve(d^2+diag(lambda,2,2))%*%d%*%t(u)%*%y # Formula in terms of SVD
+
+(shrinkage<-t(u)%*%Xb.ridge/t(u)%*%Xb.2)  # Components of Xb.ridge and Xb.2 in the directions of the 
+                                          # directions of the basis given by the columns of u
+
+d[1,1]^2/shrinkage[1]-d[1,1]^2 # recovers lambda
+d[2,2]^2/shrinkage[2]-d[2,2]^2
+
+```
+
+### Principal components
+
+The covariance matrix of z=Xv=ud is d^2. The matrix Xv has the same column space as X. The columns are orthogonal, and in order of decreasing variance from left to right.The columns of Xv are the principal components of X. 
+
+One strategy for model tuning is to use the first through the kth largest variance components, where k is the tuning parameter. The rationale is that these sequences of explanatory variables capture the main directions of variability in X.
+
+```{r}
+dat.x=data.frame(X)
+dat.u=data.frame(-1*u%*%d)
+ggplot(data=dat.x,aes(x=X1,y=X2))+geom_point()+geom_point(data=dat.u,aes(x=X1,y=X2),color="green")
+
+z<-X%*%v
+var(z)
+d^2/(length(x1)-1)
+sum(diag(var(z)))
+sum(diag(var(X)))
+```
+
+## glmnet adjustment
+
+The glmnet function has a different scale on $lambda$ than the exposition here.
+
+```{r}
+
+n<-length(y)
+p<-2
+
+sd_y <- sqrt(var(y)*(n-1)/n)[1,1]
+beta1 <- solve(t(X)%*%X+5*diag(p))%*%t(X)%*%y
+
+fit_glmnet <- glmnet(X,y, alpha=0, standardize = F, intercept = FALSE, thresh = 1e-20) # Don't standardize X
+beta2 <- coef(fit_glmnet,x=X,y=y,s = sd_y*5/n, exact = TRUE)
+
+beta1
+beta2
+```
+
+## When Ridge Goes Wrong
+
+If the value of y is actually based on a low-variance direction in X, the shrinkage will be counterproductive.
+
+```{r}
+set.seed(678987)
+x1.2<-scale(rnorm(50))
+x2.2<-scale(rnorm(50,x1.2,.7))
+qplot(x1.2,x2.2)
+y.2<-x1.2-x2.2+rnorm(50,1)
+y.2<-y.2-mean(y.2)
+cor(x1.2-x2.2,y.2)
+qplot(x1.2-x2.2,y.2)
+
+summary(lm(y.2~x1.2+x2.2))
+X.2<-cbind(x1.2,x2.2)
+set.seed(567)
+cvfit = cv.glmnet(x=X.2, y=y.2,alpha=0)
+plot(cvfit)
+cvfit$lambda.min
+coef(cvfit, s = "lambda.min")
+cvfit$lambda.1se
+coef(cvfit, s = "lambda.1se")
+```
+
+Similarly, PCA models that emphasize initial components will fail if the outcome variable is a function of later components.
+
+```{r}
+prod.2<-svd(X.2)
+(u.2<-prod.2$u)[1:10,]
+(v.2<-prod.2$v)
+(d.2<-diag(prod.2$d))
+z<-X.2%*%v.2
+var(z)
+z1<-z[,1]
+z2<-z[,2]
+
+summary(lm(y.2~z1+z2))
+summary(lm(y.2~z1))
+```
+

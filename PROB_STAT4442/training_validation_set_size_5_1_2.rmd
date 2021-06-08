@@ -1,0 +1,203 @@
+---
+title: "Sample Size for Train-Validate-Test"
+author: "C. Durso"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Purpose
+
+Check the size of data sets for train-validate-test and cross-validation. 
+
+The training set should be large enough that the validation error is stable for training subsets approximately the size of the training set.
+
+The validation set should be large enough that the validation selection is stable.
+
+## Train-Validate-Test
+
+### SA Heart
+
+Read in data and break into training, validation, and test sets.
+
+```{r}
+dat<-read.csv("SAheart.data")
+# The "dplyr::"" specifies that the dplyr "select" function be used
+dat<-dplyr::select(dat, -row.names) 
+n<-nrow(dat)
+
+set.seed(123456)
+tvt<-sample(rep(0:2,c(round(n*.2),round(n*.2),n-2*round(n*.2))),n)
+mean(dat$chd[tvt==0])
+mean(dat$chd[tvt==1])
+mean(dat$chd[tvt==2])
+mean(dat$chd)
+
+dat.train<-dat[tvt==2,]
+dat.valid<-dat[tvt==1,]
+dat.test<-dat[tvt==0,]
+count(dat.train)
+count(dat.valid)
+count(dat.test)
+```
+
+### Deviance function
+
+In order to use deviance as the criterion for model fit, implement a deviance function
+
+The deviance formula follows from $\prod_{i=1}^{n}\left(\pi_{i}\right)^{y_{i}}\left(1-\pi_{i}\right)^{1-y_{i}}$ where the vector $\pi=\frac{\exp(X\beta)}{1+\exp(X\beta)}$
+
+
+```{r}
+valid.dev<-function(m.pred, dat.this){
+  pred.m<-predict(m.pred,dat.this, type="response")
+-2*sum(dat.this$chd*log(pred.m)+(1-dat.this$chd)*log(1-pred.m))
+}
+```
+
+### Full model and forward model
+
+For future reference, fit a model of "chd" on the training data using all the explanatory variables and their squares. Also fit the forward model based on these explanatory variables.
+
+```{r}
+m<-glm(chd~1,data=dat.train,family="binomial") 
+nam<-names(dat.train)[1:(ncol(dat.train)-1)]
+
+# Assemble the names of the numeric variables
+nam.num<-setdiff(nam,"famhist")
+
+# Use stringr to avoid typing all the explanatory variables.
+fmla.sq<-as.formula(str_c("chd~",str_c("I(",nam.num,"^2)",
+              collapse="+"),"+",str_c(nam,collapse = "+")))
+
+m.forward<-step(m,scope=fmla.sq,direction = "forward",trace=0 )
+summary(m.forward)
+m.forward$anova
+
+m.full<-glm(fmla.sq,data=dat.train, family="binomial")
+summary(m.full)
+```
+
+## Validation error for full models
+
+Because the full model can be fit on these data, the performance of the validation error for the full model fit to a nested sequence of training sets can be calculated and plotted. 
+
+If the number of cases in the training data aren't sufficient to support the complexity of the full model, the model parameters will still be improving markedly as the size of the training sets reaches the full size of the training data. Consequently, the validation error will still be decreasing sharply as the size of the training sets reaches the full size of the training data. 
+
+```{r}
+n<-nrow(dat.train)
+  
+
+# function to calculate the mean training error and
+# the mean validation error on the set 
+# "valid.this" of the model with formula "fmla.this"
+# fit to an initial subset of "train.this" 
+# of size "size.this" 
+dev.full<-function(size.this,train.this,valid.this,fmla.this){
+  m.full<-glm(fmla.this,data=train.this[1:size.this,],family="binomial") 
+  return(c(m.full$deviance/size.this,
+           valid.dev(m.full,valid.this)/nrow(valid.this)))
+}
+
+# Randomize the order of the training data
+set.seed(12345)
+dat.base<-dat.train[sample(1:n,n),]
+
+# Generate a sequence of sizes for the nested training sets 
+size.train<-seq((n-200),n,by=10)
+
+# Apply the mean deviance function to this sequence, using the 
+# validation data, the full formula, and the randomized
+# training data
+devs.mat<-apply(matrix(size.train,ncol=1),1,
+      dev.full,train.this=dat.base,valid.this=dat.valid,fmla.this=fmla.sq)
+
+# Format the result for plotting
+devs<-data.frame(t(devs.mat))
+names(devs)<-c("training","validation")
+devs<-cbind(size.train,devs)
+devs<-gather(devs,dataset,adj.deviance,training:validation)
+
+ggplot(devs,aes(x=size.train,y=adj.deviance,color=dataset))+geom_line()
+
+```
+
+## Validation error for forward models
+
+Alternatively, the forward model can be fit to each training set. Something like this will be necessary when there are too many proposed explanatory variables to fit the full model.
+
+```{r}
+
+dev.forward<-function(size.this,train.this,valid.this,fmla.this){
+  m.base<-glm(chd~1,data=train.this[1:size.this,],family="binomial") 
+  m.forward<-step(m.base,scope=fmla.this,direction = "forward",trace=0)
+  return(c(m.forward$deviance/size.this,
+           valid.dev(m.forward,valid.this)/nrow(valid.this)))
+}
+
+devs.mat<-apply(matrix(size.train,ncol=1),1,
+      dev.forward,train.this=dat.base,valid.this=dat.valid,fmla.this=fmla.sq)
+devs<-data.frame(t(devs.mat))
+names(devs)<-c("training","validation")
+devs<-cbind(size.train,devs)
+devs<-gather(devs,dataset,adj.deviance,training:validation)
+
+ggplot(devs,aes(x=size.train,y=adj.deviance,color=dataset))+geom_line()
+
+```
+
+
+## Stability of validation results
+
+The model selected by the validation set may be too sensitive to the values in the validation set if the validation set is too small. Fit the full model and the forward model on the full training set and look at the range of validation set deviances when increasing portions of the validation set are used. 
+
+```{r}
+set.seed(3456)
+n.valid<-nrow(dat.valid)
+# Randomize the order of the validation set
+dat.valid.rand<-
+  dat.valid[sample(1:n.valid,n.valid),]
+
+# function to calculate the error of the model
+# "m" on the first "size.valid" entries of the set "valid.this"
+dev.valid.seq<-function(size.valid,m,valid.this){
+  return(valid.dev(m,valid.this[1:size.valid,])/size.valid)
+}
+
+# Apply the function above to increasing portions of the 
+# validation set using the full model.
+devs.valid.full.seq<-
+  apply(matrix(1:n.valid,ncol=1),1,
+      dev.valid.seq,m=m.full,valid.this=dat.valid.rand)
+
+# Apply the function above to increasing portions of the 
+# validation set using the forward model.
+devs.valid.forward.seq<-
+  apply(matrix(1:n.valid,ncol=1),1,
+      dev.valid.seq,m=m.forward,valid.this=dat.valid.rand)
+
+# Format the results for plotting
+devs.valid.full<-
+  data.frame(size.valid=1:n.valid,
+           adj.deviance=devs.valid.full.seq,model="full")
+devs.valid.forward<-
+  data.frame(size.valid=1:n.valid,
+           adj.deviance=devs.valid.forward.seq,model="forward")
+devs.valid<-suppressWarnings(
+  bind_rows(devs.valid.full,devs.valid.forward)
+)
+
+
+
+ggplot(data=devs.valid,
+       aes(x=size.valid,y=adj.deviance,color=model))+geom_line()+
+  labs(title="Mean Validation Deviances")
+
+```
+
+
+
+

@@ -1,0 +1,66 @@
+---
+title: "Forward Selection for Logistic Regression"
+author: "C. Durso"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(MASS)
+```
+
+## Purpose
+
+Many of the model selection methods available for linear regression are also available for logistic regression. Here, this is illustrated by identifying the best forward model
+
+
+## Data
+
+```{r}
+dat<-read.csv("SAheart.data")
+# The "dplyr::"" specifies that the dplyr "select" function be used
+dat<-dplyr::select(dat, -row.names) 
+n<-nrow(dat)
+
+
+set.seed(21466)
+train<-sample(rep(0:1,c(round(n*.3),n-round(n*.3))),n)
+mean(dat$chd[train==1])
+mean(dat$chd[train==0])
+mean(dat$chd)
+
+dat.train<-dat[train==1,]
+dat.test<-dat[train==0,]
+```
+
+## Best Forward model
+
+The goal of the following code is to extract the best forward model for "chd" based on the given explanatory variables according to the AIC. Please modify the indicated lines of code to accomplish this. 
+
+```{r}
+# Intercept-only model
+# Convert this to a logistic model
+# m<-lm(chd~1,data=dat.train) 
+nam<-names(dat.train)[1:(ncol(dat.train)-1)]
+
+# Use stringr to avoid typing all the explanatory variables.
+# What should go after the "," below?
+fmla<-str_c("chd~","your code here")
+
+# Please provide the arguments to fit a forward model for 
+# "chd" based on the remaining variables.
+
+#m.forward<-step(,, )
+summary(m.forward)
+
+```
+
+
+
+
+
+
+
+
+

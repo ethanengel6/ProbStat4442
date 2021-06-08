@@ -1,0 +1,81 @@
+---
+title: "Poisson Ridge Regression"
+author: "C. Durso"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(glmnet)
+```
+
+## Introduction
+
+The data set "cells.csv" from Crawley, Statistics: an Introduction using R gives the number of abnormal cells in samples from individuals with additional data provided. The goal here is to fit a cross validated ridge regression model to the data set with all pairwise interactions and to assess the performance using log likelihood on a test set.
+
+
+## Data
+
+```{r, cache=TRUE}
+
+dat<-read.csv("cells.csv")
+X<-model.matrix(as.formula("cells~(smoker+sex+age+weight)^2"),
+                data=dat)
+X<-X[,-1]
+Y<-dat$cells
+
+set.seed(3456787)
+train.ind<-sample(1:nrow(dat),round(.7*nrow(dat)))
+test.ind<-setdiff(1:nrow(dat),train.ind)
+
+X.train<-X[train.ind,]
+Y.train<-Y[train.ind]
+
+X.test<-X[test.ind,]
+Y.test<-Y[test.ind]
+
+```
+
+
+### Cross-validation with glmnet
+
+Fit a cross validated poisson ridge regression model on the training data.
+
+```{r}
+set.seed(3456787)
+#cvfit = cv.glmnet(your code here)
+plot(cvfit)
+cvfit$lambda.min
+coef(cvfit, s = "lambda.min")
+cvfit$lambda.1se
+coef(cvfit, s = "lambda.1se")
+```
+
+### Likelihood comparison:
+
+Model comparison by log likelihood of the test seems logical, given that the models were fit by maximum likelihood. Here, larger is better.
+
+```{r}
+cvpred<-predict(cvfit,X.test,c(cvfit$lambda.min,cvfit$lambda.1se),type="response")
+
+#sum(log(cvpred[,1]^y.test*exp(-cvpred[,1])/factorial(y.test))) without simplification
+
+sum(Y.test*log(cvpred[,1])-cvpred[,1]-log(factorial(Y.test)))
+
+sum(Y.test*log(cvpred[,2])-cvpred[,2]-log(factorial(Y.test)))
+
+```
+
+
+
+
+
+
+
+
+
+
+

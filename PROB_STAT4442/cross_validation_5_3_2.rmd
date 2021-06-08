@@ -1,0 +1,242 @@
+---
+title: "Cross-validation"
+author: "C. Durso"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Cross-validation
+
+With subsets too small for the training and test or train,validate,test approach, cross-validation may be used to select among candidate models. The data are partitioned into subsets of approximately equal size called folds. Each fold in turn is omitted, and the model is fit on the remaining folds. Then the fitted model is evaluated on the omitted fold, and the goodness of fit noted. 
+
+Here, we use the sum of squared errors. The SSE's for each fold are summed to give a measure of the quality of the overall model fit.
+
+### Pollution Data Set
+
+The pollution data set fits a large forward model. 
+
+```{r}
+pollute<-read.csv("sulphur.dioxide.csv",header=TRUE)
+dat<-data.frame(scale(pollute))
+nam<-names(dat)[-1]
+squares<-paste(paste("I(",nam,"^2)"),collapse="+")
+fmla <- as.formula(paste("Pollution ~ ", 
+  	paste(nam, collapse= "*"),"+",squares))
+		
+fmla
+
+forward.model<-step(lm(Pollution~1,data=dat),scope=fmla,
+                    direction="forward",trace=0)
+summary(forward.model)
+```
+
+This seems inappropriately complex for a data set with 41 observations.
+
+## Check with cross validation
+
+### Check this model
+
+Perform cross validation on this model. This isn't as strong a test of overfitting as what follows, since the variables were selected on the basis of the whole data set.
+
+#### Full data SSE
+
+The sum of square errors, SSE, for this model on the full data set can be compared to the cross validation error as an indication of overfitting.
+
+```{r}
+sum(forward.model$residuals^2)
+```
+
+
+#### Create the folds
+
+```{r}
+n<-nrow(dat)
+fold<-8
+ind<-rep(1:fold, ceiling(n/fold))
+ind<-ind[1:n]
+set.seed(12345)
+ind<-sample(ind)
+table(ind)
+ind
+```
+
+#### Cross-validation function
+
+This assumes that the variable to be modeled is in the first column
+
+```{r}
+# Move the outcome variable to the beginning
+dat<-select(dat,Pollution,everything())
+xv<-function(dat,ind,fmla){
+  xv_sum<-0
+  n<-max(ind)
+	for( i in 1:n){
+		dat_curr<-dat[ind!=i,] # Leave out the current fold
+		m_curr<-lm(fmla,data=dat_curr)
+		fit_val<-predict(m_curr,dat[ind==i,])
+		resid<-fit_val-dat[ind==i,1]
+		xv_sum<-xv_sum+sum(resid^2)
+	
+	}
+	return(xv_sum)
+}
+```
+
+#### Results
+
+```{r}
+ vars.add<-forward.model$anova[,1]
+  vars.add<-str_replace(vars.add,"\\+ ","")
+  vars.add<-vars.add[-1]
+  
+  
+fmla.forward<-str_c("Pollution~",str_c(vars.add,collapse = "+"))
+(v<-xv(dat,ind,fmla.forward))
+
+```
+
+### Optional repetition
+
+```{r,cache=TRUE}
+xv_mean<-function(fmla,dat,fold,N){
+	set.seed(1234)
+	n<-nrow(dat)
+	sum_curr<-0
+	for(i in 1:N){
+		ind<-rep(1:fold, ceiling(n/fold))
+		ind<-ind[1:n]
+		ind<-sample(ind)
+		sum_curr<-sum_curr+xv(dat,ind,fmla)
+	}
+	return(sum_curr/N)
+}
+
+xv_mean(fmla.forward,dat,10,100)
+
+```
+
+## Model complexity
+
+Cross validation can be used to select model complexity in methods that generate a sequence of models. For example, when fitting forward models, the number of explanatory variables to use can be decided using cross validation. 
+
+To do this, fit the sequence of forward models on the data set with the first fold omitted. Calculate the sum of the squares of the differences of the predicted values and the observed values of the first fold for each model in the sequence. Repeat for the remaining folds. Select the model size that has the lowest average sum of squared errors across the folds.
+
+## Select with cross validation
+
+Write a function that fits forward models of up to 10 variables on a given data set and evaluates the sum of the squared prediction errors on another data set. (In the interest of readability, these functions are specific to the current problem and would need to be modified for a new application.)
+
+```{r}
+# function to collect the first "i" variables added during a
+# forward selection and
+# create a formula for "Pollution" in terms of these variables
+
+fmla.add.fnc<-function(i,vars.add){
+  vars.in<-vars.add[1:i]
+  return(as.formula(str_c("Pollution~",str_c(vars.in,collapse="+"))))
+  
+}
+
+# function to calculate validation set SSE
+sse.valid<-function(m,dat.valid){
+  return(sum((predict(m,dat.valid)-dat.valid$Pollution)^2))
+}
+
+# function to fit 10 forward models with scope "fmla.this
+#on the data set "dat.this" and
+# return the SSE for each model on "dat.valid.this".
+
+sse.get<-function(dat.this,fmla.this,dat.valid.this){
+  m.forward<-step(lm(Pollution~1,data=dat.this),scope=fmla.this,
+                  k=0,steps=10, direction="forward",trace=0)
+  
+  # create a vector "vars.add" of the variables added in order.
+  vars.add<-m.forward$anova[,1]
+  vars.add<-str_replace(vars.add,"\\+ ","")
+  vars.add[1]<-1 # Intercept only
+  
+  # Apply "fmla.add.fnc" to each value of "i". This
+  # gives the formulas for the models generated by forward
+  # selection.
+  
+  fmlas<-apply(matrix(1:length(vars.add),ncol=1),1,
+               fmla.add.fnc,vars.add=vars.add)
+  
+  # Make a list of models corresponding to these formulas.
+  models<-
+    lapply(fmlas,function(x){glm(x,data=dat.this)})
+  
+  # Calculate the SSE on "dat.valid" for each model.
+  return(sapply(models,sse.valid,dat.valid=dat.valid.this))
+}
+
+```
+
+Write a wrapper function for sse.get that creates the data sets based on the index.
+
+```{r}
+sse.wrapper<-function(i,dat.w,ind.w,fmla.w){
+  return(sse.get(dat.w[ind.w!=i,],fmla.w,
+                 dat.w[ind.w==i,]))
+}
+# sse.get(dat[ind!=i,],fmla,dat[ind==i,]) for debugging
+# sse.wrapper(3,dat,ind,fmla)
+
+```
+
+Write a function that creates a fold structure, applies the wrapper function to each fold, sums the corresponding model SSE's, and returns the vector of sums.
+
+```{r}
+sse.sums.xv<-function(dat.this,fmla.this){
+  n<-nrow(dat.this)
+  fold<-8
+  ind<-rep(1:fold, ceiling(n/fold))
+  ind<-ind[1:n]
+  ind<-sample(ind)
+  xv.mat<-apply(matrix(1:8,ncol=1),1,sse.wrapper,dat.w=dat.this,
+        ind.w=ind,
+        fmla.w=fmla.this)
+  return(apply(xv.mat,1,sum))
+}
+
+sse.sums.xv(dat,fmla)
+```
+
+Replicate, sum, and choose model size
+
+```{r}
+set.seed(4567)
+runs<-replicate(10,sse.sums.xv(dat,fmla))
+runs.mean<-apply(runs,1,mean)
+(model.size<-which(runs.mean==min(runs.mean)))
+```
+
+Note that this value is one greater than the number of variables because the intercept-only model is the first one fit. Find the corresponding model on the full data set.
+
+```{r}
+forward.model.xv<-step(lm(Pollution~1,data=dat),scope=fmla,
+                    direction="forward",steps=2,trace=0)
+summary(forward.model.xv)
+```
+
+In how many of the runs is the third SSE the smallest?
+
+```{r}
+# your code here
+```
+
+
+
+
+
+
+
+
+
+

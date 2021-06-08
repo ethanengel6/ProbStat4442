@@ -1,0 +1,38 @@
+---
+title: "Poisson Regression Example"
+author: "C. Durso"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Introduction
+
+Regression for count data can use a non-Gaussian error process. The family of Poisson distributions is a one-parameter family of distributions with outcomes in the positive integers. The Poisson distribution with parameter $\lambda$ has the probability mass function $p(k)=\frac{\lambda^ke^{-\lambda}}{k!}$. 
+
+## Data
+
+The data "clusters.csv" are from *Statistics, An introduction using R*. They represent the number of reported cancer cases per year per clinic, together with the distance from a nuclear plant to the clinic in km.
+
+```{r}
+dat<-read.csv("../../text_data/clusters.csv")
+qplot(data=dat,Distance,Cancers)
+```
+
+## Poisson model
+```{r}
+m<-glm(Cancers~Distance,data=dat,family="poisson")
+summary(m)
+```
+
+
+
+
+## Model Selection
+
+Many of the model selection methods discussed for linear regression are available for Poisson regression (though fewer for quasipoisson). 

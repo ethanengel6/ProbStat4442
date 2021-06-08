@@ -1,0 +1,53 @@
+---
+title: "Multiple Regression Covariance Exercise"
+author: "C. Durso"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Purpose
+
+This illustrates the use of the covariance matrix of a multiple regression to test the hypothesis of equality of two coefficients.
+
+## Data
+
+The data are body measurements, age, and gender for a collection of physically active individuals.
+
+Measurements were initially taken by Grete 
+Heinz and Louis J. Peterson at San Jose State University and at the 
+U.S. Naval Postgraduate School in Monterey, California. Later, 
+measurements were taken at dozens of California health and fitness 
+clubs by technicians under the supervision of one of these authors.
+
+Downloaded 9/5/2019 from http://jse.amstat.org/datasets/body.dat.txt
+
+The variable names are supplied from the documentation at 
+http://jse.amstat.org/datasets/body.txt
+
+```{r}
+dat<-read.table("body.dat.txt")
+nam<-c("biacromial.diam","biiliac.diam", "bitrochanteric.diam","chest.depth","chest.diam", "elbow.diam","wrist.diam", "knee.diam","ankle.diam","shoulder.girth", "chest.girth", 
+ "waist.girth", "Navel.girth", "hip.girth","Thigh.girth", 
+"Bicep.girth", "Forearm.girth", "Knee.girth", "Calf.girth",
+"Ankle.girth", "Wrist.girth", "Age", "Weight", "height","Gender")
+nam<-str_to_lower(nam)
+names(dat)<-nam
+dat<-dat[dat$gender==0,] # restrict to female cases
+```
+
+## Forward model
+
+The body measurement data was used to estimate weight based on the remaining measurements. These measurements address the volume of the individual. The measurements selected by a forward model on training data using the AIC are I(hip.girth^2),I(chest.girth^2), I(calf.girth^2), height, I(waist.girth^2), I(knee.girth^2),  I(thigh.girth^2), chest.girth, I(forearm.girth^2), wrist.diam,  biiliac.diam. (Somewhat surprisingly, all interactions of height with the remaining measurements are dropped. While the interactions may not show during the trace, they are considered.)
+
+Fit this model on the full data set with scaled measurements.
+       
+
+```{r}
+dat<-dplyr::select(dat,-gender)
+dat.scale<-data.frame(scale(dat))
+dat.scale$weight<-dat$weight
+```

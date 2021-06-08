@@ -1,0 +1,210 @@
+---
+title: "Problem Set 2, Spring 2021"
+author: "Wendy Christensen"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+
+# Load any packages, if any, that you use as part of your answers here
+# For example: 
+
+library(ggplot2)
+library(doBy)
+
+```
+
+Let's say that, in my excitement about seeing flour in the grocery store again, I decided to conduct a factorial experiment inspired by the experiment conducted by Lowe (1935) to learn more about how much fat doughnuts absorb in different conditions. Like Lowe, I used four types of fats (fat_type). I also used three types of flour (flour_type): all-purpose flour, whole wheat flour, and gluten-free flour. Again like Lowe, I cooked six identical batches of doughnuts in each flour and fat combination. Each batch contained 24 doughnuts, and the total fat (in grams) absorbed by the doughnuts in each batch was recorded (total_fat).
+
+You will use the doughnuts.factorial data set for Questions 1 - 7. Question 8 will use the doughnuts data set from Problem Set 1. 
+
+## Question 1 - 5 points
+
+You may need to process your data before you begin your analysis. Specifically, you will need to make sure that the variable type is set to 'factor' for both of your grouping variables and 'num' for your outcome variable.
+
+```{r }
+
+doughnuts.factorial <- read.csv("doughnutsfactorial.csv", header=TRUE, sep=",") # Loads the CSV file into memory. You may need to adapt this line to work on your computer
+
+# Put any further code needed for processing below:
+doughnuts.factorial$fat_type_factor <- factor(doughnuts.factorial$fat_type)
+doughnuts.factorial$flour_type_factor <- factor(doughnuts.factorial$flour_type)
+doughnuts.factorial$sim_tot_fat<- as.numeric(doughnuts.factorial$sim_tot_fat)
+doughnuts.factorial
+
+```
+
+## Question 2 - 10 points
+
+You will conduct a two-way ANOVA with an interaction to determine the effect of fat type and flour type on the absorption of fat into the doughnuts. Before you begin your analysis, do the following two things:
+
+1) Fill in the blanks in this sentence with the appropriate numbers: "This experiment had two factors, fat type and flour type, making this a _ by _ factorial design with _ cell means."
+
+Your answer here: "This experiment had two factors, fat type and flour type, making this a 4 by 3 factorial design with 12 cell means." 
+
+2) Create a table showing the cell means. *For full credit, label your table in such a way that someone unfamiliar with the data set would be able to identify the cell means*. For example, a viewer should be able to quickly identify the mean of doughnuts made with AP flour and fried in Fat Type 1. You may use any package/s you like to create the table, but please be sure to (a) include any package/s in the set-up code chunk at the top of this document and (b) display the completed table in your knitted document. To help give you some ideas, here are some links you can check out to get started:
+
+https://www.statology.org/create-table-in-r/
+https://rfortherestofus.com/2019/11/how-to-make-beautiful-tables-in-r/
+https://bookdown.org/kdonovan125/ibis_data_analysis_r4/working-with-tables-in-r.html
+https://cyclismo.org/tutorial/R/tables.html
+
+```{r }
+
+# Code for your table here
+
+factor.table<-summaryBy(sim_tot_fat ~ fat_type_factor+flour_type_factor,data=doughnuts.factorial , 
+         FUN=c(mean),na.rm=TRUE)
+factor.table
+# Make sure to display your table in your knitted document!
+
+```
+
+
+## Question 3 - 5 points
+
+Provide a visual assessment for the assumptions of normality and equality of variances for each cell. 
+
+```{r }
+
+# Code for visual assessment of normality for each cell
+ggplot(doughnuts.factorial, aes(sample=sim_tot_fat))+stat_qq()+stat_qq_line()+facet_wrap( ~ fat_type_factor+flour_type_factor)
+# Be sure to display your visual assessment in your knitted document!
+
+
+
+# Code for visual assessment of equality of variances for each cell
+ggplot(data=doughnuts.factorial, aes(y=sim_tot_fat))+geom_boxplot()+facet_grid(rows=vars(flour_type_factor),cols=vars(fat_type_factor))
+
+# Be sure to display your visual assessment in your knitted document!
+
+```
+
+## Question 4 - 5 points
+
+Before conducting your two-way ANOVA, start by conducting one-way ANOVAs for each of your factors. You wouldn't do this in practice, but you'll do it here for comparison purposes in Question 7. You do not need to interpret these ANOVAs, but be sure to display the output in your knitted document.
+
+Your one-way ANOVA for testing if the means in total fat are the same across fat types:
+```{r }
+
+# Code for a one-way ANOVA using fat type
+model<-aov(sim_tot_fat~fat_type_factor,data=doughnuts.factorial)
+summary(model)
+
+# Don't forget to display your results!
+
+```
+
+Your one-way ANOVA for testing if the means in total fat are the same across flour types:
+```{r }
+
+# Code for a one-way ANOVA using flour type
+model2<-aov(sim_tot_fat~flour_type_factor,data=doughnuts.factorial)
+summary(model2)
+# Don't forget to display your results!
+
+```
+
+## Question 5 - 10 points
+
+Conduct a two-way ANOVA with an interaction between fat type and flour type. Please be sure to display your ANOVA results using the summary() function. 
+
+```{r }
+
+# Code for the two-way ANOVA 
+model3<-aov(sim_tot_fat~flour_type_factor*fat_type_factor,data=doughnuts.factorial)
+summary(model3)
+
+# Don't forget to display your results!
+
+```
+
+## Question 6 - 10 points
+
+Please state the three null hypotheses being tested in your analysis in Question 5 and interpret the result in the context of the research question. After interpreting the interaction, please note if the result of the interaction test changes how you view the results of the tests of main effects. 
+
+Fat type:
+There is no difference in the mean fat absorption between the different fat types.
+With a p-value of .00958, the null hypothesis would be rejected at either the alpha .05 or .01 levels.  There is fairly convincing evidence of a difference in mean fat absorption between the different flour types that were used.
+
+
+Flour type:
+There is no difference in the mean fat absorption between the different flour types.
+With a p-value of <.001, the null hypothesis would be rejected at either the alpha .05 or .01 levels.  There is overwhelmingly convincing evidence of a difference in mean fat absorption between the different fat types that were used.
+
+
+Interaction:
+There is no evidence of an interaction between the fat and flour types regarding to the amount of fat absorption.
+With a p-value of approximately .67, the null hypothesis would not be rejected.  There is not evidence of an interaction between fat and flour types.
+
+## Question 7 - 5 points
+
+You conducted 2 one-way ANOVAs in Question 4 and 1 two-way ANOVA with an interaction in Question 5. In this question, I want you to comment on differences and similarities between the one-way ANOVA output and the two-way ANOVA with an interaction output. 
+
+1) How are the sums of squares of fat type and flour type in their respective one-way ANOVAs similar or different to their respective sums of squares in the two-way ANOVA with an interaction?
+
+Your answer here: The sum of squares for both fat type(6967) and flour type(1063) are identical between the one-way and two-way ANOVAs. 
+
+2) How are the degrees of freedom associated with fat type and flour type in their respective one-way ANOVAs similar or different to their respective degrees of freedom in the two-way ANOVA with an interaction?
+
+Your answer here:  The degrees of freedom for both fat type(3) and flour type(2) are also identical between the one-way and two-way ANOVA tests.
+
+3) How are the p-values of fat type and flour type in their respective one-way ANOVAs similar or different to their respective p-values in the two-way ANOVA with an interaction?
+
+Your answer here:  The p-values for both factor variables decreased from the one-way to the two-way ANOVAs, as a result of higher F-statistics.  In the case of the flour type variable, it would likely lead to a different conclusion, as the p-value crossed the .05 and .01 alpha thresholds.
+
+
+
+## Question 8 - 5 points
+
+Much like how t-tests are special cases of ANOVA, ANOVA is a special case of regression. To demonstrate this, below is a regression model that is equivalently-specified to the one-way ANOVA on the Lowe data you conducted as part of Question 4 in Problem Set 1.
+
+First, load the doughnuts data set used in Problem Set 1 by running the code chunk below.
+
+```{r }
+
+# Loading the data - this is the same as in Problem Set 1
+
+doughnuts <- read.csv("doughnuts.csv",header=TRUE,sep=",") # You may need to change this line.
+doughnuts$fat_type_factor <- as.factor(doughnuts$ï..fat_type)
+doughnuts
+
+```
+
+Next, copy and paste your code from the one-way ANOVA you conducted in Question 4 of Problem Set 1. Please display your results, but don't include your interpretation of the analysis.
+
+```{r}
+
+# Insert your code for the one-way ANOVA from Question 4 of Problem Set 1. 
+model<-aov(sim_tot_fat~fat_type_factor,data=doughnuts.factorial)
+summary(model)
+
+# Don't forget to display your results!
+
+```
+
+Finally, run this code chunk as-is. This conducts and displays the results of the equivalently-specified regression analysis. 
+
+```{r}
+
+doughnuts.reg = lm(total_fat ~ fat_type_factor, data=doughnuts) # Runs a simple linear regression.
+summary(doughnuts.reg) # Displays the results
+
+```
+
+Answer the two questions below:
+
+1) There were four types of fat used in the experiment, but why are there only three coefficients in the regression model labeled as fat type? 
+
+Your answer here:  The number of coefficients reported will be equal to the degrees of freedom.  The statistics that are listed here for fat factors 2-4 are relative to the effects of fat factor 1.
+
+
+
+2) Identify two aspects in the regression model output - specifically, look in the Coefficients table and the model statistics under it - that demonstrate that this model is equivalent to the one-way ANOVA in Question 4 in Problem Set 1. 
+
+Your answer here:
+In both the ANOVA and regression cases, an analysis is being conducted on the sum of squares of residuals between the levels of the fat type factor variable, relative to what they would be in an assumption of the null hypothesis.  The mechanics of the way the tables report is similar as well.  In the ANOVA table the (sum sq)/(mean sq) yields the F-statistic.  This is analogous to the lm table where (Estimate)/(Std error) yields the t-value.
+
+

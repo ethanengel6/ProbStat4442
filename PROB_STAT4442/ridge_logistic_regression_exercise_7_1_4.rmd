@@ -1,0 +1,38 @@
+---
+title: "Ridge Regression Application"
+author: "C. Durso"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(glmnet)
+```
+
+## Purpose
+
+Logistic ridge regression is a method for stabilizing logistic regression in the presence of more variables or more correlated variables than desireable for a model that should generalize well to new data.
+
+Fit a cross-validated ridge regression model.
+
+## Data
+
+```{r}
+dat<-read.csv("SAheart.data")
+dat$row.names<-NULL
+dat$famhist<-(dat$famhist=="Present")*1
+
+X<-as.matrix(dplyr::select(dat, -chd))
+Y<-dat$chd
+```
+
+
+## Ridge with Cross Validation
+
+The function cv.glmnet computes one cross-validated MSE at each $\lambda$.
+
+```{r}
+set.seed(123456)
+
+```
